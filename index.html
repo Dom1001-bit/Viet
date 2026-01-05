@@ -1,873 +1,903 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Calendar, 
-  DollarSign, 
-  Briefcase, 
-  Plus, 
-  Trash2, 
-  Edit2, 
-  Save, 
-  X, 
-  MapPin, 
-  Utensils,
-  Bike,
-  CreditCard,
-  CheckCircle2,
-  AlertCircle,
-  ArrowUp,
-  ArrowDown,
-  Users,
-  RefreshCw
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vietnam Trip Planner</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  signInAnonymously, 
-  signInWithCustomToken,
-  onAuthStateChanged 
-} from "firebase/auth";
-import { 
-  getFirestore, 
-  doc, 
-  setDoc, 
-  onSnapshot
-} from "firebase/firestore";
-
-// --- FIREBASE SETUP ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-// --- CONSTANTS ---
-const EXCHANGE_RATE = 440; // 1 PHP = 440 VND (Approx)
-
-// --- INITIAL DATA ---
-
-const INITIAL_ITINERARY = [
-  { id: 1, date: 'Feb 25', day: 'Tue', location: 'Hanoi', time: '10:35', activity: 'Arrive at Noi Bai Airport', notes: 'Immigration & baggage' },
-  { id: 2, date: 'Feb 25', day: 'Tue', location: 'Hanoi', time: '12:00', activity: 'Transfer to Hoan Kiem', notes: 'Grab / Taxi' },
-  { id: 3, date: 'Feb 25', day: 'Tue', location: 'Hanoi', time: '13:30', activity: 'Lunch + Airbnb check-in', notes: 'Near Old Quarter' },
-  { id: 4, date: 'Feb 25', day: 'Tue', location: 'Hanoi', time: '14:30', activity: 'Hoan Kiem Lake & Ngoc Son Temple', notes: 'Easy walk' },
-  { id: 5, date: 'Feb 25', day: 'Tue', location: 'Hanoi', time: 'Evening', activity: 'Old Quarter walk + dinner', notes: 'Early rest' },
-  { id: 6, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '08:00', activity: 'Breakfast', notes: 'Near Airbnb' },
-  { id: 7, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '09:00', activity: 'Ho Chi Minh Complex', notes: 'Mausoleum area' },
-  { id: 8, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '12:00', activity: 'Lunch', notes: 'Bun Cha / local' },
-  { id: 9, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '13:30', activity: 'Temple of Literature', notes: 'Cultural visit' },
-  { id: 10, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '17:30', activity: 'Back to Airbnb, pack', notes: 'Prep for loop' },
-  { id: 11, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '19:30', activity: 'Night bus to Ha Giang', notes: 'Pickup at Airbnb' },
-  { id: 12, date: 'Feb 27', day: 'Thu', location: 'Ha Giang', time: '08:30', activity: 'Breakfast @ Mama’s Homestay', notes: 'Get ready for loop' },
-  { id: 13, date: 'Feb 27', day: 'Thu', location: 'HG -> Yen Minh', time: '10:30', activity: 'Start Loop: Dong Van Karst, Heaven Gate', notes: 'Hiking: Angel couple Hill' },
-  { id: 14, date: 'Feb 27', day: 'Thu', location: 'Nam Dam', time: 'Lunch', activity: 'Lunch with local family', notes: 'Walk to Pine Tree Forest' },
-  { id: 15, date: 'Feb 27', day: 'Thu', location: 'Yen Minh', time: 'Evening', activity: 'Dinner & Overnight', notes: 'Yen Minh Homestay' },
-  { id: 16, date: 'Feb 28', day: 'Fri', location: 'Yen Minh', time: '08:00', activity: 'Breakfast', notes: '' },
-  { id: 17, date: 'Feb 28', day: 'Fri', location: 'YM -> Dong Van', time: '09:00', activity: 'Lung Cam Village & Viewpoints', notes: 'Scenic drive' },
-  { id: 18, date: 'Feb 28', day: 'Fri', location: 'Lung Cu', time: 'Afternoon', activity: 'Lung Cu Flag Tower', notes: 'Northernmost point' },
-  { id: 19, date: 'Feb 28', day: 'Fri', location: 'Dong Van', time: 'Evening', activity: 'Dinner & Old Quarter', notes: 'Stay: Guest house' },
-  { id: 20, date: 'Mar 1', day: 'Sat', location: 'Dong Van', time: '08:00', activity: 'Breakfast', notes: '' },
-  { id: 21, date: 'Mar 1', day: 'Sat', location: 'DV -> Du Gia', time: '09:00', activity: 'Ma Pi Leng Pass & Nho Que River', notes: 'Meo Vac, Ta Lung villages' },
-  { id: 22, date: 'Mar 1', day: 'Sat', location: 'Mau Due', time: 'Lunch', activity: 'Lunch stop', notes: '' },
-  { id: 23, date: 'Mar 1', day: 'Sat', location: 'Du Gia', time: 'Evening', activity: 'Dinner & Overnight', notes: 'Stay: The Hill Homestay' },
-  { id: 24, date: 'Mar 2', day: 'Sun', location: 'Du Gia', time: '08:00', activity: 'Breakfast', notes: '' },
-  { id: 25, date: 'Mar 2', day: 'Sun', location: 'DG -> Ha Giang', time: '09:00', activity: 'Du Gia Waterfall & Lung Tam', notes: 'Swim & culture' },
-  { id: 26, date: 'Mar 2', day: 'Sun', location: 'Ha Giang', time: '17:00', activity: 'Return to Mama’s Homestay', notes: 'Shower, pack, bus prep' },
-  { id: 27, date: 'Mar 3', day: 'Mon', location: 'Hanoi', time: 'Afternoon', activity: 'Train Street + shopping', notes: 'Timed entry' },
-  { id: 28, date: 'Mar 4', day: 'Tue', location: 'Hanoi', time: '02:00', activity: 'Flight to Manila', notes: 'Arrive airport by 23:00' },
-];
-
-const INITIAL_BUDGET = [
-  { id: 1, category: 'Hanoi Airbnb', vnd: 4500000, php: 10227, payer: 'Me', shared: 'Yes', people: 2 },
-  { id: 2, category: 'Food – Hanoi', vnd: 2500000, php: 5681, payer: 'Me', shared: 'No', people: 1 },
-  { id: 3, category: 'Ha Giang Loop', vnd: 6500000, php: 14772, payer: 'Me', shared: 'No', people: 1 },
-  { id: 4, category: 'Night Bus (RT)', vnd: 1750000, php: 3977, payer: 'Me', shared: 'No', people: 1 },
-  { id: 5, category: 'Activities', vnd: 1000000, php: 2272, payer: 'Partner', shared: 'Yes', people: 2 },
-  { id: 6, category: 'Shopping', vnd: 1250000, php: 2840, payer: 'Me', shared: 'No', people: 1 },
-];
-
-const INITIAL_PACKING = [
-  { id: 1, item: 'Passport + copy', category: 'Essentials', packed: 'No' },
-  { id: 2, item: 'eSIM / SIM', category: 'Essentials', packed: 'No' },
-  { id: 3, item: 'Cash (small bills)', category: 'Essentials', packed: 'No' },
-  { id: 4, item: 'Warm jacket', category: 'Clothing', packed: 'No' },
-  { id: 5, item: 'Riding pants', category: 'Ha Giang', packed: 'No' },
-  { id: 6, item: 'Gloves', category: 'Ha Giang', packed: 'No' },
-  { id: 7, item: 'Rain jacket', category: 'Ha Giang', packed: 'No' },
-  { id: 8, item: 'Toiletries', category: 'Health', packed: 'No' },
-  { id: 9, item: 'Power Bank', category: 'Tech', packed: 'No' },
-  { id: 10, item: 'Universal Adapter', category: 'Tech', packed: 'No' },
-];
-
-const INITIAL_RECS = [
-  { id: 1, category: 'Food (Hanoi)', name: 'Phở Gia Truyền Bát Đàn', map: 'https://maps.app.goo.gl/Y5y5h5hLQ9zL8XyM8', notes: 'Famous Pho' },
-  { id: 2, category: 'Food (Hanoi)', name: 'Bún Chả Hàng Quạt', map: 'https://maps.app.goo.gl/9Wm9z5oF1V5z7K8A7', notes: 'Local favorite' },
-  { id: 3, category: 'Coffee', name: 'Café Đinh', map: 'https://maps.app.goo.gl/z3W9C6J2M4r5D9fK8', notes: 'Egg Coffee' },
-  { id: 4, category: 'Activities', name: 'Train Street', map: 'https://maps.app.goo.gl/W9QF7H3R5Z8M6k2c7', notes: 'Check schedule' },
-];
-
-const INITIAL_RIDING = [
-  { id: 1, day: 'Day 1', route: 'Ha Giang → Yen Minh', condition: 'Curvy, paved', weather: 'Cold AM', notes: 'Easy warm-up ride' },
-  { id: 2, day: 'Day 2', route: 'Yen Minh → Dong Van', condition: 'Mountain passes', weather: 'Windy', notes: 'Many photo stops' },
-  { id: 3, day: 'Day 3', route: 'Dong Van → Du Gia', condition: 'Steep & scenic', weather: 'Cooler', notes: 'Ma Pi Leng Pass is key' },
-  { id: 4, day: 'Day 4', route: 'Du Gia → Ha Giang', condition: 'Mixed roads', weather: 'Warmer', notes: 'Waterfall stop' },
-];
-
-const INITIAL_EXPENSES = [
-  { id: 1, date: 'Feb 25', category: 'Food', desc: 'Lunch Hanoi', amount: 300, payer: 'Me', shared: 'No' },
-  { id: 2, date: 'Feb 26', category: 'Transport', desc: 'Grab', amount: 200, payer: 'Me', shared: 'Yes' },
-];
-
-// --- HELPER COMPONENTS ---
-
-const TabButton = ({ active, icon: Icon, label, onClick }) => (
-  <button
-    onClick={onClick}
-    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${
-      active
-        ? 'border-green-600 text-green-700 bg-green-50/50'
-        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-    }`}
-  >
-    <Icon size={16} />
-    {label}
-  </button>
-);
-
-const ActionButton = ({ onClick, icon: Icon, colorClass, title }) => (
-  <button onClick={onClick} title={title} className={`p-1.5 rounded-lg transition-colors ${colorClass}`}>
-    <Icon size={14} />
-  </button>
-);
-
-const Input = ({ value, onChange, placeholder, type = "text", className = "" }) => (
-  <input
-    type={type}
-    value={value || ''}
-    onChange={onChange}
-    placeholder={placeholder}
-    className={`w-full p-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none ${className}`}
-  />
-);
-
-const DeleteModal = ({ isOpen, onClose, onConfirm }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 border border-gray-100 transform transition-all scale-100">
-        <div className="flex flex-col items-center text-center">
-          <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-600">
-            <Trash2 size={24} />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Item?</h3>
-          <p className="text-gray-500 mb-6">
-            Are you sure you want to delete this item? This action cannot be undone.
-          </p>
-          <div className="flex gap-3 w-full">
-            <button 
-              onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={onConfirm}
-              className="flex-1 px-4 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-lg shadow-red-200 transition-colors"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- MAIN APP ---
-
-export default function VietnamPlanner() {
-  const [activeTab, setActiveTab] = useState('itinerary');
-  const [user, setUser] = useState(null);
-  const [editRow, setEditRow] = useState({ id: null, list: null });
-  const [formData, setFormData] = useState({});
-  const [deleteTarget, setDeleteTarget] = useState(null); // { id, listName }
-
-  // State
-  const [itinerary, setItinerary] = useState(INITIAL_ITINERARY);
-  const [budget, setBudget] = useState(INITIAL_BUDGET);
-  const [packing, setPacking] = useState(INITIAL_PACKING);
-  const [recs, setRecs] = useState(INITIAL_RECS);
-  const [riding, setRiding] = useState(INITIAL_RIDING);
-  const [expenses, setExpenses] = useState(INITIAL_EXPENSES);
-
-  // Map strings to state for dynamic lookup
-  const lists = {
-    itinerary, budget, packing, recs, riding, expenses
-  };
-
-  // --- FIREBASE AUTH & SYNC ---
-
-  useEffect(() => {
-    const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
+    <!-- Import Map -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.263.1",
+        "firebase/app": "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js"
       }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
+    }
+    </script>
 
-  // Generic Sync Hook
-  const useSyncData = (docName, setFunction, initialData) => {
-    useEffect(() => {
-      if (!user) return;
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'lists', docName);
-      
-      const unsubscribe = onSnapshot(docRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          if (data.items) setFunction(data.items);
-        } else {
-          setDoc(docRef, { items: initialData }).catch(e => console.error(e));
-          setFunction(initialData);
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-      }, (error) => {
-        console.error(`Error syncing ${docName}:`, error);
-      });
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        body {
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-      return () => unsubscribe();
-    }, [user, docName]);
-  };
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+            Calendar, DollarSign, Briefcase, Plus, Trash2, Edit2, Save, X, 
+            MapPin, Utensils, Bike, CreditCard, CheckCircle2, AlertCircle, 
+            ArrowUp, ArrowDown, Users, RefreshCw, AlertTriangle, ExternalLink
+        } from 'lucide-react';
+        
+        import { initializeApp } from "firebase/app";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged 
+        } from "firebase/auth";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            updateDoc,
+            onSnapshot
+        } from "firebase/firestore";
 
-  // Enable Sync for all lists
-  useSyncData('itinerary', setItinerary, INITIAL_ITINERARY);
-  useSyncData('budget', setBudget, INITIAL_BUDGET);
-  useSyncData('packing', setPacking, INITIAL_PACKING);
-  useSyncData('recs', setRecs, INITIAL_RECS);
-  useSyncData('riding', setRiding, INITIAL_RIDING);
-  useSyncData('expenses', setExpenses, INITIAL_EXPENSES);
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDNOEHf8yAGd47l4Wg7QNiH9QLXGcvBehI",
+            authDomain: "vietnam-trip-49377.firebaseapp.com",
+            projectId: "vietnam-trip-49377",
+            storageBucket: "vietnam-trip-49377.firebasestorage.app",
+            messagingSenderId: "597105587878",
+            appId: "1:597105587878:web:6db38664ce760020236667"
+        };
 
-  // --- ACTIONS ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-  const saveToFirebase = async (docName, newItems) => {
-    if (!user) return;
-    try {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'lists', docName), { items: newItems });
-    } catch (e) {
-      console.error("Error saving data:", e);
-    }
-  };
+        // --- CONSTANTS ---
+        const EXCHANGE_RATE = 440; // 1 PHP = 440 VND (Approx)
+        const DOC_ID = 'vietnam-planner'; // Simplified Document ID
 
-  const startEdit = (item, listName) => {
-    setEditRow({ id: item.id, list: listName });
-    setFormData({ ...item });
-  };
+        // --- INITIAL DATA ---
+        const INITIAL_DATA = {
+            itinerary: [
+                { id: 1, date: 'Feb 25', day: 'Tue', location: 'Hanoi', time: '10:35', activity: 'Arrive at Noi Bai Airport', notes: 'Immigration & baggage' },
+                { id: 2, date: 'Feb 25', day: 'Tue', location: 'Hanoi', time: '12:00', activity: 'Transfer to Hoan Kiem', notes: 'Grab / Taxi' },
+                { id: 3, date: 'Feb 25', day: 'Tue', location: 'Hanoi', time: '13:30', activity: 'Lunch + Airbnb check-in', notes: 'Near Old Quarter' },
+                { id: 4, date: 'Feb 25', day: 'Tue', location: 'Hanoi', time: '14:30', activity: 'Hoan Kiem Lake & Ngoc Son Temple', notes: 'Easy walk' },
+                { id: 5, date: 'Feb 25', day: 'Tue', location: 'Hanoi', time: 'Evening', activity: 'Old Quarter walk + dinner', notes: 'Early rest' },
+                { id: 6, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '08:00', activity: 'Breakfast', notes: 'Near Airbnb' },
+                { id: 7, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '09:00', activity: 'Ho Chi Minh Complex', notes: 'Mausoleum area' },
+                { id: 8, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '12:00', activity: 'Lunch', notes: 'Bun Cha / local' },
+                { id: 9, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '13:30', activity: 'Temple of Literature', notes: 'Cultural visit' },
+                { id: 10, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '17:30', activity: 'Back to Airbnb, pack', notes: 'Prep for loop' },
+                { id: 11, date: 'Feb 26', day: 'Wed', location: 'Hanoi', time: '19:30', activity: 'Night bus to Ha Giang', notes: 'Pickup at Airbnb' },
+                { id: 12, date: 'Feb 27', day: 'Thu', location: 'Ha Giang', time: '08:30', activity: 'Breakfast @ Mama’s Homestay', notes: 'Get ready for loop' },
+                { id: 13, date: 'Feb 27', day: 'Thu', location: 'HG -> Yen Minh', time: '10:30', activity: 'Start Loop: Dong Van Karst, Heaven Gate', notes: 'Hiking: Angel couple Hill' },
+                { id: 14, date: 'Feb 27', day: 'Thu', location: 'Nam Dam', time: 'Lunch', activity: 'Lunch with local family', notes: 'Walk to Pine Tree Forest' },
+                { id: 15, date: 'Feb 27', day: 'Thu', location: 'Yen Minh', time: 'Evening', activity: 'Dinner & Overnight', notes: 'Yen Minh Homestay' },
+                { id: 16, date: 'Feb 28', day: 'Fri', location: 'Yen Minh', time: '08:00', activity: 'Breakfast', notes: '' },
+                { id: 17, date: 'Feb 28', day: 'Fri', location: 'YM -> Dong Van', time: '09:00', activity: 'Lung Cam Village & Viewpoints', notes: 'Scenic drive' },
+                { id: 18, date: 'Feb 28', day: 'Fri', location: 'Lung Cu', time: 'Afternoon', activity: 'Lung Cu Flag Tower', notes: 'Northernmost point' },
+                { id: 19, date: 'Feb 28', day: 'Fri', location: 'Dong Van', time: 'Evening', activity: 'Dinner & Old Quarter', notes: 'Stay: Guest house' },
+                { id: 20, date: 'Mar 1', day: 'Sat', location: 'Dong Van', time: '08:00', activity: 'Breakfast', notes: '' },
+                { id: 21, date: 'Mar 1', day: 'Sat', location: 'DV -> Du Gia', time: '09:00', activity: 'Ma Pi Leng Pass & Nho Que River', notes: 'Meo Vac, Ta Lung villages' },
+                { id: 22, date: 'Mar 1', day: 'Sat', location: 'Mau Due', time: 'Lunch', activity: 'Lunch stop', notes: '' },
+                { id: 23, date: 'Mar 1', day: 'Sat', location: 'Du Gia', time: 'Evening', activity: 'Dinner & Overnight', notes: 'Stay: The Hill Homestay' },
+                { id: 24, date: 'Mar 2', day: 'Sun', location: 'Du Gia', time: '08:00', activity: 'Breakfast', notes: '' },
+                { id: 25, date: 'Mar 2', day: 'Sun', location: 'DG -> Ha Giang', time: '09:00', activity: 'Du Gia Waterfall & Lung Tam', notes: 'Swim & culture' },
+                { id: 26, date: 'Mar 2', day: 'Sun', location: 'Ha Giang', time: '17:00', activity: 'Return to Mama’s Homestay', notes: 'Shower, pack, bus prep' },
+                { id: 27, date: 'Mar 3', day: 'Mon', location: 'Hanoi', time: 'Afternoon', activity: 'Train Street + shopping', notes: 'Timed entry' },
+                { id: 28, date: 'Mar 4', day: 'Tue', location: 'Hanoi', time: '02:00', activity: 'Flight to Manila', notes: 'Arrive airport by 23:00' },
+            ],
+            budget: [
+                { id: 1, category: 'Hanoi Airbnb', vnd: 4500000, php: 10227, payer: 'Me', shared: 'Yes', people: 2 },
+                { id: 2, category: 'Food – Hanoi', vnd: 2500000, php: 5681, payer: 'Me', shared: 'No', people: 1 },
+                { id: 3, category: 'Ha Giang Loop', vnd: 6500000, php: 14772, payer: 'Me', shared: 'No', people: 1 },
+                { id: 4, category: 'Night Bus (RT)', vnd: 1750000, php: 3977, payer: 'Me', shared: 'No', people: 1 },
+                { id: 5, category: 'Activities', vnd: 1000000, php: 2272, payer: 'Partner', shared: 'Yes', people: 2 },
+                { id: 6, category: 'Shopping', vnd: 1250000, php: 2840, payer: 'Me', shared: 'No', people: 1 },
+            ],
+            packing: [
+                { id: 1, item: 'Passport + copy', category: 'Essentials', packed: 'No' },
+                { id: 2, item: 'eSIM / SIM', category: 'Essentials', packed: 'No' },
+                { id: 3, item: 'Cash (small bills)', category: 'Essentials', packed: 'No' },
+                { id: 4, item: 'Warm jacket', category: 'Clothing', packed: 'No' },
+                { id: 5, item: 'Riding pants', category: 'Ha Giang', packed: 'No' },
+                { id: 6, item: 'Gloves', category: 'Ha Giang', packed: 'No' },
+                { id: 7, item: 'Rain jacket', category: 'Ha Giang', packed: 'No' },
+                { id: 8, item: 'Toiletries', category: 'Health', packed: 'No' },
+                { id: 9, item: 'Power Bank', category: 'Tech', packed: 'No' },
+                { id: 10, item: 'Universal Adapter', category: 'Tech', packed: 'No' },
+            ],
+            recs: [
+                { id: 1, category: 'Food (Hanoi)', name: 'Phở Gia Truyền Bát Đàn', map: 'https://maps.app.goo.gl/Y5y5h5hLQ9zL8XyM8', notes: 'Famous Pho' },
+                { id: 2, category: 'Food (Hanoi)', name: 'Bún Chả Hàng Quạt', map: 'https://maps.app.goo.gl/9Wm9z5oF1V5z7K8A7', notes: 'Local favorite' },
+                { id: 3, category: 'Coffee', name: 'Café Đinh', map: 'https://maps.app.goo.gl/z3W9C6J2M4r5D9fK8', notes: 'Egg Coffee' },
+                { id: 4, category: 'Activities', name: 'Train Street', map: 'https://maps.app.goo.gl/W9QF7H3R5Z8M6k2c7', notes: 'Check schedule' },
+            ],
+            riding: [
+                { id: 1, day: 'Day 1', route: 'Ha Giang → Yen Minh', condition: 'Curvy, paved', weather: 'Cold AM', notes: 'Easy warm-up ride' },
+                { id: 2, day: 'Day 2', route: 'Yen Minh → Dong Van', condition: 'Mountain passes', weather: 'Windy', notes: 'Many photo stops' },
+                { id: 3, day: 'Day 3', route: 'Dong Van → Du Gia', condition: 'Steep & scenic', weather: 'Cooler', notes: 'Ma Pi Leng Pass is key' },
+                { id: 4, day: 'Day 4', route: 'Du Gia → Ha Giang', condition: 'Mixed roads', weather: 'Warmer', notes: 'Waterfall stop' },
+            ],
+            expenses: [
+                { id: 1, date: 'Feb 25', category: 'Food', desc: 'Lunch Hanoi', vnd: 132000, php: 300, payer: 'Me', shared: 'No' },
+                { id: 2, date: 'Feb 26', category: 'Transport', desc: 'Grab', vnd: 88000, php: 200, payer: 'Me', shared: 'Yes' },
+            ]
+        };
 
-  const cancelEdit = () => {
-    setEditRow({ id: null, list: null });
-    setFormData({});
-  };
+        // --- HELPER COMPONENTS ---
+        const TabButton = ({ active, icon: Icon, label, onClick }) => (
+            <button
+                onClick={onClick}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${
+                    active
+                        ? 'border-green-600 text-green-700 bg-green-50/50'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+            >
+                <Icon size={16} />
+                {label}
+            </button>
+        );
 
-  const handleFieldChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+        const ActionButton = ({ onClick, icon: Icon, colorClass, title }) => (
+            <button onClick={onClick} title={title} className={`p-1.5 rounded-lg transition-colors ${colorClass}`}>
+                <Icon size={14} />
+            </button>
+        );
 
-  // Specific handler for budget to do auto-conversion
-  const handleBudgetChange = (field, value) => {
-    if (field === 'vnd') {
-        const vndVal = parseFloat(value) || 0;
-        const phpVal = (vndVal / EXCHANGE_RATE).toFixed(2);
-        setFormData(prev => ({ ...prev, vnd: value, php: phpVal }));
-    } else if (field === 'php') {
-        const phpVal = parseFloat(value) || 0;
-        const vndVal = (phpVal * EXCHANGE_RATE).toFixed(0);
-        setFormData(prev => ({ ...prev, php: value, vnd: vndVal }));
-    } else {
-        handleFieldChange(field, value);
-    }
-  };
+        const Input = ({ value, onChange, placeholder, type = "text", className = "" }) => (
+            <input
+                type={type}
+                value={value || ''}
+                onChange={onChange}
+                placeholder={placeholder}
+                className={`w-full p-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none ${className}`}
+            />
+        );
 
-  // Enhanced Update to Sync with Firebase
-  const saveItem = (currentList, docName) => {
-    const updatedList = currentList.map(item => item.id === editRow.id ? formData : item);
-    saveToFirebase(docName, updatedList);
-    cancelEdit();
-  };
-
-  const deleteItem = (id, _ignoredList, docName) => {
-    // We ignore the passed list to use the latest state on confirm
-    setDeleteTarget({ id, listName: docName });
-  };
-
-  const confirmDelete = () => {
-    if (!deleteTarget) return;
-    const { id, listName } = deleteTarget;
-    
-    // Look up the most recent list state
-    const currentList = lists[listName];
-    if (currentList) {
-        const updatedList = currentList.filter(item => item.id !== id);
-        saveToFirebase(listName, updatedList);
-    }
-    setDeleteTarget(null);
-  };
-
-  const addItem = (currentList, template, docName) => {
-    const newId = currentList.length > 0 ? Math.max(...currentList.map(i => i.id)) + 1 : 1;
-    const newItem = { id: newId, ...template };
-    const updatedList = [...currentList, newItem];
-    saveToFirebase(docName, updatedList);
-  };
-
-  // --- REORDERING LOGIC ---
-  const moveItem = (index, direction, currentList, docName) => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === currentList.length - 1) return;
-
-    const newList = [...currentList];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
-    // Swap
-    [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
-    
-    saveToFirebase(docName, newList);
-  };
-
-  // --- RENDER FUNCTIONS ---
-
-  const renderItinerary = () => (
-    <div>
-      <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
-            <tr>
-              <th className="p-3 w-12 text-center">#</th>
-              <th className="p-3 w-24">Date</th>
-              <th className="p-3 w-16">Day</th>
-              <th className="p-3 w-32">Location</th>
-              <th className="p-3 w-20">Time</th>
-              <th className="p-3">Activity</th>
-              {/* Removed Map Link Column */}
-              <th className="p-3 w-40">Notes</th>
-              <th className="p-3 w-28 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {itinerary.map((item, index) => {
-              const isEditing = editRow.id === item.id && editRow.list === 'itinerary';
-              return (
-                <tr key={item.id} className="hover:bg-gray-50 group">
-                  <td className="p-2 text-center">
-                    <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => moveItem(index, 'up', itinerary, 'itinerary')}
-                        disabled={index === 0}
-                        className={`p-1 rounded hover:bg-gray-200 ${index === 0 ? 'text-gray-300' : 'text-gray-500'}`}
-                      >
-                        <ArrowUp size={12} />
-                      </button>
-                      <button 
-                        onClick={() => moveItem(index, 'down', itinerary, 'itinerary')}
-                        disabled={index === itinerary.length - 1}
-                        className={`p-1 rounded hover:bg-gray-200 ${index === itinerary.length - 1 ? 'text-gray-300' : 'text-gray-500'}`}
-                      >
-                        <ArrowDown size={12} />
-                      </button>
-                    </div>
-                  </td>
-                  {isEditing ? (
-                    <>
-                      <td className="p-2"><Input value={formData.date} onChange={e => handleFieldChange('date', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.day} onChange={e => handleFieldChange('day', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.location} onChange={e => handleFieldChange('location', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.time} onChange={e => handleFieldChange('time', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.activity} onChange={e => handleFieldChange('activity', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.notes} onChange={e => handleFieldChange('notes', e.target.value)} /></td>
-                      <td className="p-2 flex gap-1 justify-center">
-                        <ActionButton onClick={() => saveItem(itinerary, 'itinerary')} icon={Save} colorClass="bg-green-100 text-green-700" />
-                        <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="p-3 text-sm font-medium">{item.date}</td>
-                      <td className="p-3 text-sm text-gray-500">{item.day}</td>
-                      <td className="p-3 text-sm text-gray-600">{item.location}</td>
-                      <td className="p-3 text-sm text-gray-500">{item.time}</td>
-                      <td className="p-3 text-sm text-gray-800 font-medium">{item.activity}</td>
-                      <td className="p-3 text-sm text-gray-500 italic">{item.notes}</td>
-                      <td className="p-3 text-center">
-                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ActionButton onClick={() => startEdit(item, 'itinerary')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
-                          <ActionButton onClick={() => deleteItem(item.id, itinerary, 'itinerary')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
+        const DeleteModal = ({ isOpen, onClose, onConfirm }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 border border-gray-100 transform transition-all scale-100">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-600">
+                                <Trash2 size={24} />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Item?</h3>
+                            <p className="text-gray-500 mb-6">
+                                Are you sure you want to delete this item? This action cannot be undone.
+                            </p>
+                            <div className="flex gap-3 w-full">
+                                <button 
+                                    onClick={onClose}
+                                    className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={onConfirm}
+                                    className="flex-1 px-4 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-lg shadow-red-200 transition-colors"
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <button onClick={() => addItem(itinerary, { date: 'Feb 25', day: '', location: 'Hanoi', time: '', activity: '', notes: '' }, 'itinerary')} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800">
-        <Plus size={16} /> Add Activity
-      </button>
-    </div>
-  );
+                    </div>
+                </div>
+            );
+        };
 
-  const renderBudget = () => {
-    const totalPerPerson = budget.reduce((sum, item) => {
-      const cost = parseFloat(item.php) || 0;
-      const people = parseInt(item.people) || 1;
-      return sum + (item.shared === 'Yes' ? cost / people : cost);
-    }, 0);
-
-    return (
-      <div>
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-green-100">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xs uppercase text-gray-500 font-bold">Estimated Cost Per Person</h3>
-                    <p className="text-2xl font-bold text-green-700">₱{totalPerPerson.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                  </div>
-                  <div className="text-right text-xs text-gray-400">
-                    1 PHP ≈ 440 VND
-                  </div>
+        const PermissionErrorBanner = () => (
+            <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 rounded-r-lg shadow-sm">
+                <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                        <AlertTriangle className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div className="ml-3">
+                        <h3 className="text-sm font-medium text-red-800">Setup Required: Firestore Permission Denied</h3>
+                        <div className="mt-2 text-sm text-red-700">
+                            <p className="mb-2">Your Firebase Security Rules are blocking access. To fix this:</p>
+                            <ol className="list-decimal pl-5 space-y-1">
+                                <li>Go to the <a href="https://console.firebase.google.com/project/vietnam-trip-49377/firestore/rules" target="_blank" className="font-bold underline hover:text-red-900">Firebase Console Rules Tab</a></li>
+                                <li>Change <code>allow read, write: if false;</code> to <code>allow read, write: if true;</code></li>
+                                <li>Click "Publish"</li>
+                                <li>Refresh this page.</li>
+                            </ol>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
-              <tr>
-                <th className="p-3">Category</th>
-                <th className="p-3 w-32 text-right">Cost (VND)</th>
-                <th className="p-3 w-32 text-right">Cost (PHP)</th>
-                <th className="p-3 w-24">Paid By</th>
-                <th className="p-3 w-20 text-center">Shared?</th>
-                <th className="p-3 w-16 text-center">Ppl</th>
-                <th className="p-3 w-32 text-right">Split (PHP)</th>
-                <th className="p-3 w-20 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {budget.map(item => {
-                const isEditing = editRow.id === item.id && editRow.list === 'budget';
-                const costPHP = parseFloat(item.php) || 0;
-                const perPerson = item.shared === 'Yes' ? (costPHP / item.people) : costPHP;
+        );
+
+        // --- MAIN APP ---
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('itinerary');
+            const [user, setUser] = useState(null);
+            const [editRow, setEditRow] = useState({ id: null, list: null });
+            const [formData, setFormData] = useState({});
+            const [deleteTarget, setDeleteTarget] = useState(null);
+            const [permissionError, setPermissionError] = useState(false);
+
+            // State for all lists
+            const [data, setData] = useState(INITIAL_DATA);
+
+            // --- FIREBASE AUTH & SYNC ---
+            useEffect(() => {
+                const initAuth = async () => {
+                    try {
+                        await signInAnonymously(auth);
+                    } catch (e) {
+                        console.error("Auth failed:", e);
+                    }
+                };
+                initAuth();
+                const unsubscribe = onAuthStateChanged(auth, setUser);
+                return () => unsubscribe();
+            }, []);
+
+            // Consolidated Sync Hook (One Doc Listener)
+            useEffect(() => {
+                if (!user) return;
                 
+                // Using a simple collection structure 'trips' -> 'vietnam-planner'
+                const docRef = doc(db, 'trips', DOC_ID);
+                
+                const unsubscribe = onSnapshot(docRef, (snapshot) => {
+                    setPermissionError(false); // Clear error on success
+                    if (snapshot.exists()) {
+                        const cloudData = snapshot.data();
+                        // Merge cloud data with initial structure to prevent crashes if fields are missing
+                        setData(prev => ({ ...prev, ...cloudData }));
+                    } else {
+                        // Initialize document if it doesn't exist
+                        setDoc(docRef, INITIAL_DATA, { merge: true }).catch(e => {
+                             if (e.code === 'permission-denied') setPermissionError(true);
+                             else console.error("Init failed:", e);
+                        });
+                    }
+                }, (error) => {
+                    console.error("Sync Error:", error);
+                    if (error.code === 'permission-denied') {
+                        setPermissionError(true);
+                    }
+                });
+
+                return () => unsubscribe();
+            }, [user]);
+
+            // --- ACTIONS ---
+            // Generic update function to save specific list to the shared doc
+            const updateListInCloud = async (listName, newList) => {
+                if (!user) return;
+                const docRef = doc(db, 'trips', DOC_ID);
+                try {
+                    await updateDoc(docRef, { [listName]: newList });
+                } catch (e) {
+                    console.error("Update failed:", e);
+                    if (e.code === 'permission-denied') setPermissionError(true);
+                }
+            };
+
+            const startEdit = (item, listName) => {
+                setEditRow({ id: item.id, list: listName });
+                setFormData({ ...item });
+            };
+
+            const cancelEdit = () => {
+                setEditRow({ id: null, list: null });
+                setFormData({});
+            };
+
+            const handleFieldChange = (field, value) => {
+                setFormData(prev => ({ ...prev, [field]: value }));
+            };
+
+            const handleCurrencyChange = (field, value) => {
+                if (field === 'vnd') {
+                    const vndVal = parseFloat(value) || 0;
+                    const phpVal = (vndVal / EXCHANGE_RATE).toFixed(2);
+                    setFormData(prev => ({ ...prev, vnd: value, php: phpVal }));
+                } else if (field === 'php') {
+                    const phpVal = parseFloat(value) || 0;
+                    const vndVal = (phpVal * EXCHANGE_RATE).toFixed(0);
+                    setFormData(prev => ({ ...prev, php: value, vnd: vndVal }));
+                } else {
+                    handleFieldChange(field, value);
+                }
+            };
+
+            const saveItem = (listName) => {
+                const currentList = data[listName];
+                const updatedList = currentList.map(item => item.id === editRow.id ? formData : item);
+                // Optimistic update
+                setData(prev => ({ ...prev, [listName]: updatedList }));
+                updateListInCloud(listName, updatedList);
+                cancelEdit();
+            };
+
+            const deleteItem = (id, listName) => {
+                setDeleteTarget({ id, listName });
+            };
+
+            const confirmDelete = () => {
+                if (!deleteTarget) return;
+                const { id, listName } = deleteTarget;
+                const currentList = data[listName];
+                
+                if (currentList) {
+                    const updatedList = currentList.filter(item => item.id !== id);
+                    setData(prev => ({ ...prev, [listName]: updatedList })); // Optimistic
+                    updateListInCloud(listName, updatedList);
+                }
+                setDeleteTarget(null);
+            };
+
+            const addItem = (listName, template) => {
+                const currentList = data[listName];
+                const newId = currentList.length > 0 ? Math.max(...currentList.map(i => i.id)) + 1 : 1;
+                const newItem = { id: newId, ...template };
+                const updatedList = [...currentList, newItem];
+                setData(prev => ({ ...prev, [listName]: updatedList })); // Optimistic
+                updateListInCloud(listName, updatedList);
+            };
+
+            const moveItem = (index, direction, listName) => {
+                const currentList = data[listName];
+                if (direction === 'up' && index === 0) return;
+                if (direction === 'down' && index === currentList.length - 1) return;
+
+                const newList = [...currentList];
+                const targetIndex = direction === 'up' ? index - 1 : index + 1;
+                [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
+                
+                setData(prev => ({ ...prev, [listName]: newList })); // Optimistic
+                updateListInCloud(listName, newList);
+            };
+
+            // --- RENDER FUNCTIONS ---
+            const renderItinerary = () => (
+                <div>
+                    <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
+                                <tr>
+                                    <th className="p-3 w-12 text-center">#</th>
+                                    <th className="p-3 w-24">Date</th>
+                                    <th className="p-3 w-16">Day</th>
+                                    <th className="p-3 w-32">Location</th>
+                                    <th className="p-3 w-20">Time</th>
+                                    <th className="p-3">Activity</th>
+                                    <th className="p-3 w-40">Notes</th>
+                                    <th className="p-3 w-28 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {data.itinerary.map((item, index) => {
+                                    const isEditing = editRow.id === item.id && editRow.list === 'itinerary';
+                                    return (
+                                        <tr key={item.id} className="hover:bg-gray-50 group">
+                                            <td className="p-2 text-center">
+                                                <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => moveItem(index, 'up', 'itinerary')} disabled={index === 0} className={`p-1 rounded hover:bg-gray-200 ${index === 0 ? 'text-gray-300' : 'text-gray-500'}`}><ArrowUp size={12} /></button>
+                                                    <button onClick={() => moveItem(index, 'down', 'itinerary')} disabled={index === data.itinerary.length - 1} className={`p-1 rounded hover:bg-gray-200 ${index === data.itinerary.length - 1 ? 'text-gray-300' : 'text-gray-500'}`}><ArrowDown size={12} /></button>
+                                                </div>
+                                            </td>
+                                            {isEditing ? (
+                                                <>
+                                                    <td className="p-2"><Input value={formData.date} onChange={e => handleFieldChange('date', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.day} onChange={e => handleFieldChange('day', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.location} onChange={e => handleFieldChange('location', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.time} onChange={e => handleFieldChange('time', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.activity} onChange={e => handleFieldChange('activity', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.notes} onChange={e => handleFieldChange('notes', e.target.value)} /></td>
+                                                    <td className="p-2 flex gap-1 justify-center">
+                                                        <ActionButton onClick={() => saveItem('itinerary')} icon={Save} colorClass="bg-green-100 text-green-700" />
+                                                        <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
+                                                    </td>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <td className="p-3 text-sm font-medium">{item.date}</td>
+                                                    <td className="p-3 text-sm text-gray-500">{item.day}</td>
+                                                    <td className="p-3 text-sm text-gray-600">{item.location}</td>
+                                                    <td className="p-3 text-sm text-gray-500">{item.time}</td>
+                                                    <td className="p-3 text-sm text-gray-800 font-medium">{item.activity}</td>
+                                                    <td className="p-3 text-sm text-gray-500 italic">{item.notes}</td>
+                                                    <td className="p-3 text-center">
+                                                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <ActionButton onClick={() => startEdit(item, 'itinerary')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
+                                                            <ActionButton onClick={() => deleteItem(item.id, 'itinerary')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            )}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button onClick={() => addItem('itinerary', { date: 'Feb 25', day: '', location: 'Hanoi', time: '', activity: '', notes: '' })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Activity</button>
+                </div>
+            );
+
+            const renderBudget = () => {
+                const totalPerPerson = data.budget.reduce((sum, item) => {
+                    const cost = parseFloat(item.php) || 0;
+                    const people = parseInt(item.people) || 1;
+                    return sum + (item.shared === 'Yes' ? cost / people : cost);
+                }, 0);
+
                 return (
-                  <tr key={item.id} className="hover:bg-gray-50 group">
-                    {isEditing ? (
-                      <>
-                        <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
-                        <td className="p-2">
-                            <div className="relative">
-                                <Input type="number" value={formData.vnd} onChange={e => handleBudgetChange('vnd', e.target.value)} className="text-right pr-6" placeholder="VND" />
-                                <span className="absolute right-2 top-2 text-xs text-gray-400">₫</span>
+                    <div>
+                        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-white p-4 rounded-lg shadow-sm border border-green-100">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="text-xs uppercase text-gray-500 font-bold">Estimated Cost Per Person</h3>
+                                        <p className="text-2xl font-bold text-green-700">₱{totalPerPerson.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                    </div>
+                                    <div className="text-right text-xs text-gray-400">1 PHP ≈ 440 VND</div>
+                                </div>
                             </div>
-                        </td>
-                        <td className="p-2">
-                             <div className="relative">
-                                <Input type="number" value={formData.php} onChange={e => handleBudgetChange('php', e.target.value)} className="text-right pr-6" placeholder="PHP" />
-                                <span className="absolute right-2 top-2 text-xs text-gray-400">₱</span>
+                        </div>
+                        <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
+                                    <tr>
+                                        <th className="p-3">Category</th>
+                                        <th className="p-3 w-32 text-right">Cost (VND)</th>
+                                        <th className="p-3 w-32 text-right">Cost (PHP)</th>
+                                        <th className="p-3 w-24">Paid By</th>
+                                        <th className="p-3 w-20 text-center">Shared?</th>
+                                        <th className="p-3 w-16 text-center">Ppl</th>
+                                        <th className="p-3 w-32 text-right">Split (PHP)</th>
+                                        <th className="p-3 w-20 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {data.budget.map(item => {
+                                        const isEditing = editRow.id === item.id && editRow.list === 'budget';
+                                        const costPHP = parseFloat(item.php) || 0;
+                                        const perPerson = item.shared === 'Yes' ? (costPHP / item.people) : costPHP;
+                                        
+                                        return (
+                                            <tr key={item.id} className="hover:bg-gray-50 group">
+                                                {isEditing ? (
+                                                    <>
+                                                        <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
+                                                        <td className="p-2">
+                                                            <div className="relative">
+                                                                <Input type="number" value={formData.vnd} onChange={e => handleCurrencyChange('vnd', e.target.value)} className="text-right pr-6" placeholder="VND" />
+                                                                <span className="absolute right-2 top-2 text-xs text-gray-400">₫</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <div className="relative">
+                                                                <Input type="number" value={formData.php} onChange={e => handleCurrencyChange('php', e.target.value)} className="text-right pr-6" placeholder="PHP" />
+                                                                <span className="absolute right-2 top-2 text-xs text-gray-400">₱</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-2"><Input value={formData.payer} onChange={e => handleFieldChange('payer', e.target.value)} placeholder="Name" /></td>
+                                                        <td className="p-2">
+                                                            <select value={formData.shared} onChange={e => handleFieldChange('shared', e.target.value)} className="w-full p-1.5 text-sm border rounded">
+                                                                <option value="Yes">Yes</option>
+                                                                <option value="No">No</option>
+                                                            </select>
+                                                        </td>
+                                                        <td className="p-2"><Input type="number" value={formData.people} onChange={e => handleFieldChange('people', e.target.value)} className="text-center" /></td>
+                                                        <td className="p-3 text-right text-gray-400 text-sm">₱{Number(perPerson).toFixed(0)}</td>
+                                                        <td className="p-2 flex gap-1 justify-center">
+                                                            <ActionButton onClick={() => saveItem('budget')} icon={Save} colorClass="bg-green-100 text-green-700" />
+                                                            <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
+                                                        </td>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <td className="p-3 text-sm font-medium text-gray-800">{item.category}</td>
+                                                        <td className="p-3 text-sm text-right text-gray-500">₫{Number(item.vnd || 0).toLocaleString()}</td>
+                                                        <td className="p-3 text-sm text-right font-bold text-gray-800">₱{Number(item.php || 0).toLocaleString()}</td>
+                                                        <td className="p-3 text-sm text-gray-600">{item.payer}</td>
+                                                        <td className="p-3 text-sm text-center">
+                                                            <span className={`px-2 py-1 rounded text-xs font-semibold ${item.shared === 'Yes' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{item.shared}</span>
+                                                        </td>
+                                                        <td className="p-3 text-sm text-center text-gray-600">{item.people}</td>
+                                                        <td className="p-3 text-sm text-right font-medium text-green-700">₱{Number(perPerson).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
+                                                        <td className="p-3 text-center">
+                                                            <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <ActionButton onClick={() => startEdit(item, 'budget')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
+                                                                <ActionButton onClick={() => deleteItem(item.id, 'budget')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
+                                                            </div>
+                                                        </td>
+                                                    </>
+                                                )}
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        <button onClick={() => addItem('budget', { category: 'New Expense', vnd: 0, php: 0, payer: 'Me', shared: 'No', people: 1 })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Budget Item</button>
+                    </div>
+                );
+            };
+
+            const renderPacking = () => {
+                const packedCount = data.packing.filter(p => p.packed === 'Yes').length;
+                const totalCount = data.packing.length;
+                const percentage = totalCount === 0 ? 0 : Math.round((packedCount / totalCount) * 100);
+
+                return (
+                    <div>
+                        <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                            <div className="flex justify-between items-end mb-2">
+                                <h3 className="text-sm font-bold text-gray-600">Packing Progress</h3>
+                                <span className="text-lg font-bold text-green-600">{percentage}%</span>
                             </div>
-                        </td>
-                         <td className="p-2"><Input value={formData.payer} onChange={e => handleFieldChange('payer', e.target.value)} placeholder="Name" /></td>
-                        <td className="p-2">
-                          <select value={formData.shared} onChange={e => handleFieldChange('shared', e.target.value)} className="w-full p-1.5 text-sm border rounded">
-                            <option value="Yes">Yes</option>
-                            <option value="No">No</option>
-                          </select>
-                        </td>
-                        <td className="p-2"><Input type="number" value={formData.people} onChange={e => handleFieldChange('people', e.target.value)} className="text-center" /></td>
-                        <td className="p-3 text-right text-gray-400 text-sm">₱{Number(perPerson).toFixed(0)}</td>
-                        <td className="p-2 flex gap-1 justify-center">
-                          <ActionButton onClick={() => saveItem(budget, 'budget')} icon={Save} colorClass="bg-green-100 text-green-700" />
-                          <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="p-3 text-sm font-medium text-gray-800">{item.category}</td>
-                        <td className="p-3 text-sm text-right text-gray-500">₫{Number(item.vnd || 0).toLocaleString()}</td>
-                        <td className="p-3 text-sm text-right font-bold text-gray-800">₱{Number(item.php || 0).toLocaleString()}</td>
-                        <td className="p-3 text-sm text-gray-600">{item.payer}</td>
-                        <td className="p-3 text-sm text-center">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${item.shared === 'Yes' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {item.shared}
-                          </span>
-                        </td>
-                        <td className="p-3 text-sm text-center text-gray-600">{item.people}</td>
-                        <td className="p-3 text-sm text-right font-medium text-green-700">₱{Number(perPerson).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>
-                        <td className="p-3 text-center">
-                          <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ActionButton onClick={() => startEdit(item, 'budget')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
-                            <ActionButton onClick={() => deleteItem(item.id, budget, 'budget')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
-                          </div>
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <button onClick={() => addItem(budget, { category: 'New Expense', vnd: 0, php: 0, payer: 'Me', shared: 'No', people: 1 }, 'budget')} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800">
-          <Plus size={16} /> Add Budget Item
-        </button>
-      </div>
-    );
-  };
-
-  const renderPacking = () => {
-    const packedCount = packing.filter(p => p.packed === 'Yes').length;
-    const totalCount = packing.length;
-    const percentage = totalCount === 0 ? 0 : Math.round((packedCount / totalCount) * 100);
-
-    return (
-      <div>
-        <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-           <div className="flex justify-between items-end mb-2">
-              <h3 className="text-sm font-bold text-gray-600">Packing Progress</h3>
-              <span className="text-lg font-bold text-green-600">{percentage}%</span>
-           </div>
-           <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div className="bg-green-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }}></div>
-           </div>
-        </div>
-
-        <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
-              <tr>
-                <th className="p-3">Item</th>
-                <th className="p-3 w-40">Category</th>
-                <th className="p-3 w-32 text-center">Packed?</th>
-                <th className="p-3 w-20 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {packing.map(item => {
-                const isEditing = editRow.id === item.id && editRow.list === 'packing';
-                return (
-                  <tr key={item.id} className="hover:bg-gray-50 group">
-                    {isEditing ? (
-                      <>
-                        <td className="p-2"><Input value={formData.item} onChange={e => handleFieldChange('item', e.target.value)} /></td>
-                        <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
-                        <td className="p-2">
-                           <select 
-                            value={formData.packed} 
-                            onChange={e => handleFieldChange('packed', e.target.value)}
-                            className="w-full p-1.5 text-sm border rounded bg-white"
-                          >
-                            <option value="No">No</option>
-                            <option value="Yes">Yes</option>
-                          </select>
-                        </td>
-                        <td className="p-2 flex gap-1 justify-center">
-                          <ActionButton onClick={() => saveItem(packing, 'packing')} icon={Save} colorClass="bg-green-100 text-green-700" />
-                          <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className={`p-3 text-sm font-medium ${item.packed === 'Yes' ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{item.item}</td>
-                        <td className="p-3 text-sm text-gray-500">{item.category}</td>
-                        <td className="p-3 text-center">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
-                            item.packed === 'Yes' ? 'bg-green-100 text-green-700' : 'bg-amber-50 text-amber-700'
-                          }`}>
-                            {item.packed === 'Yes' ? <CheckCircle2 size={12}/> : <AlertCircle size={12}/>}
-                            {item.packed}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ActionButton onClick={() => startEdit(item, 'packing')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
-                            <ActionButton onClick={() => deleteItem(item.id, packing, 'packing')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
-                          </div>
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <button onClick={() => addItem(packing, { item: '', category: 'General', packed: 'No' }, 'packing')} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800">
-          <Plus size={16} /> Add Item
-        </button>
-      </div>
-    );
-  };
-
-  const renderRecs = () => (
-    <div>
-      <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
-            <tr>
-              <th className="p-3 w-40">Category</th>
-              <th className="p-3">Name</th>
-              <th className="p-3 w-24">Map Link</th>
-              <th className="p-3">Notes</th>
-              <th className="p-3 w-20 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {recs.map(item => {
-              const isEditing = editRow.id === item.id && editRow.list === 'recs';
-              return (
-                <tr key={item.id} className="hover:bg-gray-50 group">
-                  {isEditing ? (
-                    <>
-                      <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.name} onChange={e => handleFieldChange('name', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.map} onChange={e => handleFieldChange('map', e.target.value)} placeholder="URL" /></td>
-                      <td className="p-2"><Input value={formData.notes} onChange={e => handleFieldChange('notes', e.target.value)} /></td>
-                      <td className="p-2 flex gap-1 justify-center">
-                        <ActionButton onClick={() => saveItem(recs, 'recs')} icon={Save} colorClass="bg-green-100 text-green-700" />
-                        <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="p-3 text-sm text-gray-500">{item.category}</td>
-                      <td className="p-3 text-sm font-medium text-gray-800">{item.name}</td>
-                      <td className="p-3 text-sm">
-                        {item.map && <a href={item.map} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1"><MapPin size={12}/> Link</a>}
-                      </td>
-                      <td className="p-3 text-sm text-gray-600">{item.notes}</td>
-                      <td className="p-3 text-center">
-                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ActionButton onClick={() => startEdit(item, 'recs')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
-                          <ActionButton onClick={() => deleteItem(item.id, recs, 'recs')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
+                            <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                <div className="bg-green-600 h-2.5 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }}></div>
+                            </div>
                         </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              )}
-            )}
-          </tbody>
-        </table>
-      </div>
-      <button onClick={() => addItem(recs, { category: 'Food', name: '', map: '', notes: '' }, 'recs')} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800">
-        <Plus size={16} /> Add Recommendation
-      </button>
-    </div>
-  );
 
-  const renderRiding = () => (
-    <div>
-       <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
-            <tr>
-              <th className="p-3 w-24">Day</th>
-              <th className="p-3">Route</th>
-              <th className="p-3 w-40">Conditions</th>
-              <th className="p-3 w-32">Weather</th>
-              <th className="p-3">Notes</th>
-              <th className="p-3 w-20 text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {riding.map(item => {
-              const isEditing = editRow.id === item.id && editRow.list === 'riding';
-              return (
-                <tr key={item.id} className="hover:bg-gray-50 group">
-                  {isEditing ? (
-                    <>
-                      <td className="p-2"><Input value={formData.day} onChange={e => handleFieldChange('day', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.route} onChange={e => handleFieldChange('route', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.condition} onChange={e => handleFieldChange('condition', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.weather} onChange={e => handleFieldChange('weather', e.target.value)} /></td>
-                      <td className="p-2"><Input value={formData.notes} onChange={e => handleFieldChange('notes', e.target.value)} /></td>
-                      <td className="p-2 flex gap-1 justify-center">
-                        <ActionButton onClick={() => saveItem(riding, 'riding')} icon={Save} colorClass="bg-green-100 text-green-700" />
-                        <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="p-3 text-sm font-bold text-gray-700">{item.day}</td>
-                      <td className="p-3 text-sm font-medium text-gray-800">{item.route}</td>
-                      <td className="p-3 text-sm text-gray-600">{item.condition}</td>
-                      <td className="p-3 text-sm text-gray-600">{item.weather}</td>
-                      <td className="p-3 text-sm text-gray-500 italic">{item.notes}</td>
-                      <td className="p-3 text-center">
-                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <ActionButton onClick={() => startEdit(item, 'riding')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
-                          <ActionButton onClick={() => deleteItem(item.id, riding, 'riding')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
+                        <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
+                                    <tr>
+                                        <th className="p-3">Item</th>
+                                        <th className="p-3 w-40">Category</th>
+                                        <th className="p-3 w-32 text-center">Packed?</th>
+                                        <th className="p-3 w-20 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {data.packing.map(item => {
+                                        const isEditing = editRow.id === item.id && editRow.list === 'packing';
+                                        return (
+                                            <tr key={item.id} className="hover:bg-gray-50 group">
+                                                {isEditing ? (
+                                                    <>
+                                                        <td className="p-2"><Input value={formData.item} onChange={e => handleFieldChange('item', e.target.value)} /></td>
+                                                        <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
+                                                        <td className="p-2">
+                                                            <select value={formData.packed} onChange={e => handleFieldChange('packed', e.target.value)} className="w-full p-1.5 text-sm border rounded bg-white">
+                                                                <option value="No">No</option>
+                                                                <option value="Yes">Yes</option>
+                                                            </select>
+                                                        </td>
+                                                        <td className="p-2 flex gap-1 justify-center">
+                                                            <ActionButton onClick={() => saveItem('packing')} icon={Save} colorClass="bg-green-100 text-green-700" />
+                                                            <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
+                                                        </td>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <td className={`p-3 text-sm font-medium ${item.packed === 'Yes' ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{item.item}</td>
+                                                        <td className="p-3 text-sm text-gray-500">{item.category}</td>
+                                                        <td className="p-3 text-center">
+                                                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${item.packed === 'Yes' ? 'bg-green-100 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                                                                {item.packed === 'Yes' ? <CheckCircle2 size={12}/> : <AlertCircle size={12}/>}
+                                                                {item.packed}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <ActionButton onClick={() => startEdit(item, 'packing')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
+                                                                <ActionButton onClick={() => deleteItem(item.id, 'packing')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
+                                                            </div>
+                                                        </td>
+                                                    </>
+                                                )}
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              )}
-            )}
-          </tbody>
-        </table>
-      </div>
-       <button onClick={() => addItem(riding, { day: 'Day X', route: '', condition: '', weather: '', notes: '' }, 'riding')} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800">
-        <Plus size={16} /> Add Route
-      </button>
-    </div>
-  );
-
-  const renderExpenses = () => {
-    const totalSpent = expenses.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
-    const myShare = expenses.reduce((sum, item) => {
-      const amt = parseFloat(item.amount || 0);
-      return sum + (item.shared === 'Yes' ? amt / 2 : amt); 
-    }, 0);
-
-    return (
-      <div>
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                <h3 className="text-xs uppercase text-gray-500 font-bold">Total Spent</h3>
-                <p className="text-2xl font-bold text-gray-800">${totalSpent.toFixed(2)}</p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
-                <h3 className="text-xs uppercase text-gray-500 font-bold">My Share (Approx)</h3>
-                <p className="text-2xl font-bold text-blue-700">${myShare.toFixed(2)}</p>
-            </div>
-        </div>
-        <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
-              <tr>
-                <th className="p-3 w-24">Date</th>
-                <th className="p-3 w-32">Category</th>
-                <th className="p-3">Description</th>
-                <th className="p-3 w-24 text-right">Amount</th>
-                <th className="p-3 w-24">Paid By</th>
-                <th className="p-3 w-24 text-center">Shared?</th>
-                <th className="p-3 w-20 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {expenses.map(item => {
-                const isEditing = editRow.id === item.id && editRow.list === 'expenses';
-                return (
-                  <tr key={item.id} className="hover:bg-gray-50 group">
-                    {isEditing ? (
-                      <>
-                        <td className="p-2"><Input value={formData.date} onChange={e => handleFieldChange('date', e.target.value)} /></td>
-                        <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
-                        <td className="p-2"><Input value={formData.desc} onChange={e => handleFieldChange('desc', e.target.value)} /></td>
-                        <td className="p-2"><Input type="number" value={formData.amount} onChange={e => handleFieldChange('amount', e.target.value)} className="text-right"/></td>
-                        <td className="p-2"><Input value={formData.payer} onChange={e => handleFieldChange('payer', e.target.value)} /></td>
-                        <td className="p-2">
-                          <select value={formData.shared} onChange={e => handleFieldChange('shared', e.target.value)} className="w-full p-1.5 text-sm border rounded">
-                            <option value="Yes">Yes</option>
-                            <option value="No">No</option>
-                          </select>
-                        </td>
-                        <td className="p-2 flex gap-1 justify-center">
-                          <ActionButton onClick={() => saveItem(expenses, 'expenses')} icon={Save} colorClass="bg-green-100 text-green-700" />
-                          <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="p-3 text-sm text-gray-500">{item.date}</td>
-                        <td className="p-3 text-sm text-gray-600">{item.category}</td>
-                        <td className="p-3 text-sm font-medium text-gray-800">{item.desc}</td>
-                        <td className="p-3 text-sm text-right font-bold">${Number(item.amount).toFixed(2)}</td>
-                        <td className="p-3 text-sm text-gray-600">{item.payer}</td>
-                        <td className="p-3 text-sm text-center">
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${item.shared === 'Yes' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {item.shared}
-                          </span>
-                        </td>
-                        <td className="p-3 text-center">
-                          <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <ActionButton onClick={() => startEdit(item, 'expenses')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
-                            <ActionButton onClick={() => deleteItem(item.id, expenses, 'expenses')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
-                          </div>
-                        </td>
-                      </>
-                    )}
-                  </tr>
+                        <button onClick={() => addItem('packing', { item: '', category: 'General', packed: 'No' })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Item</button>
+                    </div>
                 );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <button onClick={() => addItem(expenses, { date: 'Feb X', category: 'Food', desc: '', amount: 0, payer: 'Me', shared: 'No' }, 'expenses')} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800">
-          <Plus size={16} /> Add Transaction
-        </button>
-      </div>
-    );
-  };
+            };
 
-  return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-green-800 tracking-tight flex items-center gap-3">
-              <span>🇻🇳</span> Vietnam Trip Planner
-            </h1>
-            <p className="text-gray-500 mt-1">Interactive dashboard for your upcoming adventure.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`text-sm px-4 py-2 rounded-lg shadow-sm border flex items-center gap-2 transition-colors ${user ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
-              <div className={`w-2 h-2 rounded-full ${user ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-              {user ? 'Live Sync Active' : 'Connecting...'}
-            </div>
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 flex items-center gap-1 text-xs font-semibold" title="Collaborative Mode">
-              <Users size={14} /> Shared
-            </div>
-          </div>
-        </header>
+            const renderRecs = () => (
+                <div>
+                    <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
+                                <tr>
+                                    <th className="p-3 w-40">Category</th>
+                                    <th className="p-3">Name</th>
+                                    <th className="p-3 w-24">Map Link</th>
+                                    <th className="p-3">Notes</th>
+                                    <th className="p-3 w-20 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {data.recs.map(item => {
+                                    const isEditing = editRow.id === item.id && editRow.list === 'recs';
+                                    return (
+                                        <tr key={item.id} className="hover:bg-gray-50 group">
+                                            {isEditing ? (
+                                                <>
+                                                    <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.name} onChange={e => handleFieldChange('name', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.map} onChange={e => handleFieldChange('map', e.target.value)} placeholder="URL" /></td>
+                                                    <td className="p-2"><Input value={formData.notes} onChange={e => handleFieldChange('notes', e.target.value)} /></td>
+                                                    <td className="p-2 flex gap-1 justify-center">
+                                                        <ActionButton onClick={() => saveItem('recs')} icon={Save} colorClass="bg-green-100 text-green-700" />
+                                                        <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
+                                                    </td>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <td className="p-3 text-sm text-gray-500">{item.category}</td>
+                                                    <td className="p-3 text-sm font-medium text-gray-800">{item.name}</td>
+                                                    <td className="p-3 text-sm">
+                                                        {item.map && <a href={item.map} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline flex items-center gap-1"><MapPin size={12}/> Link</a>}
+                                                    </td>
+                                                    <td className="p-3 text-sm text-gray-600">{item.notes}</td>
+                                                    <td className="p-3 text-center">
+                                                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <ActionButton onClick={() => startEdit(item, 'recs')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
+                                                            <ActionButton onClick={() => deleteItem(item.id, 'recs')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            )}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button onClick={() => addItem('recs', { category: 'Food', name: '', map: '', notes: '' })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Recommendation</button>
+                </div>
+            );
 
-        {/* Main Content */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-h-[600px] flex flex-col">
-          
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 overflow-x-auto">
-            <TabButton active={activeTab === 'itinerary'} onClick={() => setActiveTab('itinerary')} icon={Calendar} label="Itinerary" />
-            <TabButton active={activeTab === 'budget'} onClick={() => setActiveTab('budget')} icon={DollarSign} label="Budget" />
-            <TabButton active={activeTab === 'packing'} onClick={() => setActiveTab('packing')} icon={Briefcase} label="Packing" />
-            <TabButton active={activeTab === 'recs'} onClick={() => setActiveTab('recs')} icon={Utensils} label="Recs" />
-            <TabButton active={activeTab === 'riding'} onClick={() => setActiveTab('riding')} icon={Bike} label="Riding" />
-            <TabButton active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} icon={CreditCard} label="Tracker" />
-          </div>
+            const renderRiding = () => (
+                <div>
+                    <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
+                                <tr>
+                                    <th className="p-3 w-24">Day</th>
+                                    <th className="p-3">Route</th>
+                                    <th className="p-3 w-40">Conditions</th>
+                                    <th className="p-3 w-32">Weather</th>
+                                    <th className="p-3">Notes</th>
+                                    <th className="p-3 w-20 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {data.riding.map(item => {
+                                    const isEditing = editRow.id === item.id && editRow.list === 'riding';
+                                    return (
+                                        <tr key={item.id} className="hover:bg-gray-50 group">
+                                            {isEditing ? (
+                                                <>
+                                                    <td className="p-2"><Input value={formData.day} onChange={e => handleFieldChange('day', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.route} onChange={e => handleFieldChange('route', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.condition} onChange={e => handleFieldChange('condition', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.weather} onChange={e => handleFieldChange('weather', e.target.value)} /></td>
+                                                    <td className="p-2"><Input value={formData.notes} onChange={e => handleFieldChange('notes', e.target.value)} /></td>
+                                                    <td className="p-2 flex gap-1 justify-center">
+                                                        <ActionButton onClick={() => saveItem('riding')} icon={Save} colorClass="bg-green-100 text-green-700" />
+                                                        <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
+                                                    </td>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <td className="p-3 text-sm font-bold text-gray-700">{item.day}</td>
+                                                    <td className="p-3 text-sm font-medium text-gray-800">{item.route}</td>
+                                                    <td className="p-3 text-sm text-gray-600">{item.condition}</td>
+                                                    <td className="p-3 text-sm text-gray-600">{item.weather}</td>
+                                                    <td className="p-3 text-sm text-gray-500 italic">{item.notes}</td>
+                                                    <td className="p-3 text-center">
+                                                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <ActionButton onClick={() => startEdit(item, 'riding')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
+                                                            <ActionButton onClick={() => deleteItem(item.id, 'riding')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            )}
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button onClick={() => addItem('riding', { day: 'Day X', route: '', condition: '', weather: '', notes: '' })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Route</button>
+                </div>
+            );
 
-          {/* View Container */}
-          <div className="p-6 flex-1 bg-gray-50/50">
-            {activeTab === 'itinerary' && renderItinerary()}
-            {activeTab === 'budget' && renderBudget()}
-            {activeTab === 'packing' && renderPacking()}
-            {activeTab === 'recs' && renderRecs()}
-            {activeTab === 'riding' && renderRiding()}
-            {activeTab === 'expenses' && renderExpenses()}
-          </div>
+            const renderExpenses = () => {
+                const totalSpent = data.expenses.reduce((sum, item) => sum + parseFloat(item.php || 0), 0);
+                const myShare = data.expenses.reduce((sum, item) => {
+                    const amt = parseFloat(item.php || 0);
+                    return sum + (item.shared === 'Yes' ? amt / 2 : amt); 
+                }, 0);
 
-        </div>
-      </div>
-      
-      {/* Modals */}
-      <DeleteModal 
-        isOpen={!!deleteTarget} 
-        onClose={() => setDeleteTarget(null)} 
-        onConfirm={confirmDelete} 
-      />
-    </div>
-  );
-}
+                return (
+                    <div>
+                        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                                <h3 className="text-xs uppercase text-gray-500 font-bold">Total Spent</h3>
+                                <p className="text-2xl font-bold text-gray-800">₱{totalSpent.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                            </div>
+                            <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
+                                <h3 className="text-xs uppercase text-gray-500 font-bold">My Share (Approx)</h3>
+                                <p className="text-2xl font-bold text-blue-700">₱{myShare.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                            </div>
+                        </div>
+                        <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
+                                    <tr>
+                                        <th className="p-3 w-24">Date</th>
+                                        <th className="p-3 w-32">Category</th>
+                                        <th className="p-3">Description</th>
+                                        <th className="p-3 w-32 text-right">Cost (VND)</th>
+                                        <th className="p-3 w-32 text-right">Cost (PHP)</th>
+                                        <th className="p-3 w-24">Paid By</th>
+                                        <th className="p-3 w-24 text-center">Shared?</th>
+                                        <th className="p-3 w-20 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {data.expenses.map(item => {
+                                        const isEditing = editRow.id === item.id && editRow.list === 'expenses';
+                                        return (
+                                            <tr key={item.id} className="hover:bg-gray-50 group">
+                                                {isEditing ? (
+                                                    <>
+                                                        <td className="p-2"><Input value={formData.date} onChange={e => handleFieldChange('date', e.target.value)} /></td>
+                                                        <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
+                                                        <td className="p-2"><Input value={formData.desc} onChange={e => handleFieldChange('desc', e.target.value)} /></td>
+                                                        <td className="p-2">
+                                                            <div className="relative">
+                                                                <Input type="number" value={formData.vnd} onChange={e => handleCurrencyChange('vnd', e.target.value)} className="text-right pr-6" placeholder="VND" />
+                                                                <span className="absolute right-2 top-2 text-xs text-gray-400">₫</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <div className="relative">
+                                                                <Input type="number" value={formData.php} onChange={e => handleCurrencyChange('php', e.target.value)} className="text-right pr-6" placeholder="PHP" />
+                                                                <span className="absolute right-2 top-2 text-xs text-gray-400">₱</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="p-2"><Input value={formData.payer} onChange={e => handleFieldChange('payer', e.target.value)} /></td>
+                                                        <td className="p-2">
+                                                            <select value={formData.shared} onChange={e => handleFieldChange('shared', e.target.value)} className="w-full p-1.5 text-sm border rounded">
+                                                                <option value="Yes">Yes</option>
+                                                                <option value="No">No</option>
+                                                            </select>
+                                                        </td>
+                                                        <td className="p-2 flex gap-1 justify-center">
+                                                            <ActionButton onClick={() => saveItem('expenses')} icon={Save} colorClass="bg-green-100 text-green-700" />
+                                                            <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
+                                                        </td>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <td className="p-3 text-sm text-gray-500">{item.date}</td>
+                                                        <td className="p-3 text-sm text-gray-600">{item.category}</td>
+                                                        <td className="p-3 text-sm font-medium text-gray-800">{item.desc}</td>
+                                                        <td className="p-3 text-sm text-right text-gray-500">₫{Number(item.vnd || 0).toLocaleString()}</td>
+                                                        <td className="p-3 text-sm text-right font-bold text-gray-800">₱{Number(item.php || 0).toLocaleString()}</td>
+                                                        <td className="p-3 text-sm text-gray-600">{item.payer}</td>
+                                                        <td className="p-3 text-sm text-center">
+                                                            <span className={`px-2 py-1 rounded text-xs font-semibold ${item.shared === 'Yes' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{item.shared}</span>
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <ActionButton onClick={() => startEdit(item, 'expenses')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
+                                                                <ActionButton onClick={() => deleteItem(item.id, 'expenses')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
+                                                            </div>
+                                                        </td>
+                                                    </>
+                                                )}
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                        <button onClick={() => addItem('expenses', { date: 'Feb X', category: 'Food', desc: '', vnd: 0, php: 0, payer: 'Me', shared: 'No' })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Transaction</button>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen font-sans p-4 md:p-8">
+                    <div className="max-w-6xl mx-auto space-y-6">
+                        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h1 className="text-3xl font-extrabold text-green-800 tracking-tight flex items-center gap-3">
+                                    <span>🇻🇳</span> Vietnam Trip Planner
+                                </h1>
+                                <p className="text-gray-500 mt-1">Interactive dashboard for your upcoming adventure.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className={`text-sm px-4 py-2 rounded-lg shadow-sm border flex items-center gap-2 transition-colors ${user ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}>
+                                    <div className={`w-2 h-2 rounded-full ${user ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                                    {user ? 'Live Sync Active' : 'Connecting...'}
+                                </div>
+                                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 flex items-center gap-1 text-xs font-semibold" title="Collaborative Mode">
+                                    <Users size={14} /> Shared
+                                </div>
+                            </div>
+                        </header>
+
+                        {permissionError && <PermissionErrorBanner />}
+
+                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-h-[600px] flex flex-col">
+                            <div className="flex border-b border-gray-200 overflow-x-auto">
+                                <TabButton active={activeTab === 'itinerary'} onClick={() => setActiveTab('itinerary')} icon={Calendar} label="Itinerary" />
+                                <TabButton active={activeTab === 'budget'} onClick={() => setActiveTab('budget')} icon={DollarSign} label="Budget" />
+                                <TabButton active={activeTab === 'packing'} onClick={() => setActiveTab('packing')} icon={Briefcase} label="Packing" />
+                                <TabButton active={activeTab === 'recs'} onClick={() => setActiveTab('recs')} icon={Utensils} label="Recs" />
+                                <TabButton active={activeTab === 'riding'} onClick={() => setActiveTab('riding')} icon={Bike} label="Riding" />
+                                <TabButton active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} icon={CreditCard} label="Tracker" />
+                            </div>
+
+                            <div className="p-6 flex-1 bg-gray-50/50">
+                                {activeTab === 'itinerary' && renderItinerary()}
+                                {activeTab === 'budget' && renderBudget()}
+                                {activeTab === 'packing' && renderPacking()}
+                                {activeTab === 'recs' && renderRecs()}
+                                {activeTab === 'riding' && renderRiding()}
+                                {activeTab === 'expenses' && renderExpenses()}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <DeleteModal 
+                        isOpen={!!deleteTarget} 
+                        onClose={() => setDeleteTarget(null)} 
+                        onConfirm={confirmDelete} 
+                    />
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
