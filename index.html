@@ -55,7 +55,8 @@
         import { 
             Calendar, DollarSign, Briefcase, Plus, Trash2, Edit2, Save, X, 
             MapPin, Utensils, Bike, CreditCard, CheckCircle2, AlertCircle, 
-            ArrowUp, ArrowDown, Users, RefreshCw, AlertTriangle, ExternalLink
+            ArrowUp, ArrowDown, Users, RefreshCw, AlertTriangle, ExternalLink,
+            ChevronDown, ChevronRight
         } from 'lucide-react';
         
         import { initializeApp } from "firebase/app";
@@ -254,6 +255,7 @@
             const [formData, setFormData] = useState({});
             const [deleteTarget, setDeleteTarget] = useState(null);
             const [permissionError, setPermissionError] = useState(false);
+            const [collapsedDates, setCollapsedDates] = useState(new Set());
 
             // State for all lists
             const [data, setData] = useState(INITIAL_DATA);
@@ -391,72 +393,138 @@
                 updateListInCloud(listName, newList);
             };
 
+            const toggleDate = (date) => {
+                setCollapsedDates(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(date)) {
+                        newSet.delete(date);
+                    } else {
+                        newSet.add(date);
+                    }
+                    return newSet;
+                });
+            };
+
             // --- RENDER FUNCTIONS ---
-            const renderItinerary = () => (
-                <div>
-                    <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-                        <table className="w-full text-left border-collapse">
-                            <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
-                                <tr>
-                                    <th className="p-3 w-12 text-center">#</th>
-                                    <th className="p-3 w-24">Date</th>
-                                    <th className="p-3 w-16">Day</th>
-                                    <th className="p-3 w-32">Location</th>
-                                    <th className="p-3 w-20">Time</th>
-                                    <th className="p-3">Activity</th>
-                                    <th className="p-3 w-40">Notes</th>
-                                    <th className="p-3 w-28 text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {data.itinerary.map((item, index) => {
-                                    const isEditing = editRow.id === item.id && editRow.list === 'itinerary';
+            const renderItinerary = () => {
+                // Group items by date
+                const groupedItems = data.itinerary.reduce((groups, item, index) => {
+                    const dateKey = item.date || 'Unscheduled';
+                    if (!groups[dateKey]) {
+                        groups[dateKey] = {
+                            date: dateKey,
+                            day: item.day || '',
+                            items: []
+                        };
+                    }
+                    groups[dateKey].items.push({ ...item, originalIndex: index });
+                    return groups;
+                }, {});
+
+                // Get ordered keys based on appearance in the array
+                const uniqueDates = [...new Set(data.itinerary.map(item => item.date || 'Unscheduled'))];
+
+                return (
+                    <div>
+                        <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
+                                    <tr>
+                                        <th className="p-3 w-12 text-center">#</th>
+                                        <th className="p-3 w-24">Date</th>
+                                        <th className="p-3 w-16">Day</th>
+                                        <th className="p-3 w-32">Location</th>
+                                        <th className="p-3 w-20">Time</th>
+                                        <th className="p-3">Activity</th>
+                                        <th className="p-3 w-40">Notes</th>
+                                        <th className="p-3 w-28 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                {uniqueDates.map(date => {
+                                    const group = groupedItems[date];
+                                    const isCollapsed = collapsedDates.has(date);
+                                    
                                     return (
-                                        <tr key={item.id} className="hover:bg-gray-50 group">
-                                            <td className="p-2 text-center">
-                                                <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => moveItem(index, 'up', 'itinerary')} disabled={index === 0} className={`p-1 rounded hover:bg-gray-200 ${index === 0 ? 'text-gray-300' : 'text-gray-500'}`}><ArrowUp size={12} /></button>
-                                                    <button onClick={() => moveItem(index, 'down', 'itinerary')} disabled={index === data.itinerary.length - 1} className={`p-1 rounded hover:bg-gray-200 ${index === data.itinerary.length - 1 ? 'text-gray-300' : 'text-gray-500'}`}><ArrowDown size={12} /></button>
-                                                </div>
-                                            </td>
-                                            {isEditing ? (
-                                                <>
-                                                    <td className="p-2"><Input value={formData.date} onChange={e => handleFieldChange('date', e.target.value)} /></td>
-                                                    <td className="p-2"><Input value={formData.day} onChange={e => handleFieldChange('day', e.target.value)} /></td>
-                                                    <td className="p-2"><Input value={formData.location} onChange={e => handleFieldChange('location', e.target.value)} /></td>
-                                                    <td className="p-2"><Input value={formData.time} onChange={e => handleFieldChange('time', e.target.value)} /></td>
-                                                    <td className="p-2"><Input value={formData.activity} onChange={e => handleFieldChange('activity', e.target.value)} /></td>
-                                                    <td className="p-2"><Input value={formData.notes} onChange={e => handleFieldChange('notes', e.target.value)} /></td>
-                                                    <td className="p-2 flex gap-1 justify-center">
-                                                        <ActionButton onClick={() => saveItem('itinerary')} icon={Save} colorClass="bg-green-100 text-green-700" />
-                                                        <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
-                                                    </td>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <td className="p-3 text-sm font-medium">{item.date}</td>
-                                                    <td className="p-3 text-sm text-gray-500">{item.day}</td>
-                                                    <td className="p-3 text-sm text-gray-600">{item.location}</td>
-                                                    <td className="p-3 text-sm text-gray-500">{item.time}</td>
-                                                    <td className="p-3 text-sm text-gray-800 font-medium">{item.activity}</td>
-                                                    <td className="p-3 text-sm text-gray-500 italic">{item.notes}</td>
-                                                    <td className="p-3 text-center">
-                                                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <ActionButton onClick={() => startEdit(item, 'itinerary')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
-                                                            <ActionButton onClick={() => deleteItem(item.id, 'itinerary')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
-                                                        </div>
-                                                    </td>
-                                                </>
-                                            )}
-                                        </tr>
+                                        <tbody key={date} className="divide-y divide-gray-100 border-b border-gray-100 last:border-0">
+                                            {/* Header Row */}
+                                            <tr 
+                                                className="bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                                                onClick={() => toggleDate(date)}
+                                            >
+                                                <td colSpan="8" className="p-3">
+                                                    <div className="flex items-center gap-2 font-bold text-gray-700">
+                                                        {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                                                        <span>{date}</span>
+                                                        {group.day && <span className="text-gray-500 font-normal">- {group.day}</span>}
+                                                        <span className="text-xs font-normal text-gray-400 ml-2">({group.items.length} items)</span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+
+                                            {/* Content Rows */}
+                                            {!isCollapsed && group.items.map((item) => {
+                                                const isEditing = editRow.id === item.id && editRow.list === 'itinerary';
+                                                return (
+                                                    <tr key={item.id} className="hover:bg-blue-50 group transition-colors">
+                                                        <td className="p-2 text-center">
+                                                            <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button 
+                                                                    onClick={(e) => { e.stopPropagation(); moveItem(item.originalIndex, 'up', 'itinerary'); }} 
+                                                                    disabled={item.originalIndex === 0} 
+                                                                    className={`p-1 rounded hover:bg-gray-200 ${item.originalIndex === 0 ? 'text-gray-300' : 'text-gray-500'}`}
+                                                                >
+                                                                    <ArrowUp size={12} />
+                                                                </button>
+                                                                <button 
+                                                                    onClick={(e) => { e.stopPropagation(); moveItem(item.originalIndex, 'down', 'itinerary'); }} 
+                                                                    disabled={item.originalIndex === data.itinerary.length - 1} 
+                                                                    className={`p-1 rounded hover:bg-gray-200 ${item.originalIndex === data.itinerary.length - 1 ? 'text-gray-300' : 'text-gray-500'}`}
+                                                                >
+                                                                    <ArrowDown size={12} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                        {isEditing ? (
+                                                            <>
+                                                                <td className="p-2"><Input value={formData.date} onChange={e => handleFieldChange('date', e.target.value)} /></td>
+                                                                <td className="p-2"><Input value={formData.day} onChange={e => handleFieldChange('day', e.target.value)} /></td>
+                                                                <td className="p-2"><Input value={formData.location} onChange={e => handleFieldChange('location', e.target.value)} /></td>
+                                                                <td className="p-2"><Input value={formData.time} onChange={e => handleFieldChange('time', e.target.value)} /></td>
+                                                                <td className="p-2"><Input value={formData.activity} onChange={e => handleFieldChange('activity', e.target.value)} /></td>
+                                                                <td className="p-2"><Input value={formData.notes} onChange={e => handleFieldChange('notes', e.target.value)} /></td>
+                                                                <td className="p-2 flex gap-1 justify-center">
+                                                                    <ActionButton onClick={() => saveItem('itinerary')} icon={Save} colorClass="bg-green-100 text-green-700" />
+                                                                    <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
+                                                                </td>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <td className="p-3 text-sm font-medium">{item.date}</td>
+                                                                <td className="p-3 text-sm text-gray-500">{item.day}</td>
+                                                                <td className="p-3 text-sm text-gray-600">{item.location}</td>
+                                                                <td className="p-3 text-sm text-gray-500">{item.time}</td>
+                                                                <td className="p-3 text-sm text-gray-800 font-medium">{item.activity}</td>
+                                                                <td className="p-3 text-sm text-gray-500 italic">{item.notes}</td>
+                                                                <td className="p-3 text-center">
+                                                                    <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <ActionButton onClick={() => startEdit(item, 'itinerary')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
+                                                                        <ActionButton onClick={() => deleteItem(item.id, 'itinerary')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
+                                                                    </div>
+                                                                </td>
+                                                            </>
+                                                        )}
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
                                     );
                                 })}
-                            </tbody>
-                        </table>
+                            </table>
+                        </div>
+                        <button onClick={() => addItem('itinerary', { date: 'Feb 25', day: '', location: 'Hanoi', time: '', activity: '', notes: '' })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Activity</button>
                     </div>
-                    <button onClick={() => addItem('itinerary', { date: 'Feb 25', day: '', location: 'Hanoi', time: '', activity: '', notes: '' })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Activity</button>
-                </div>
-            );
+                );
+            };
 
             const renderBudget = () => {
                 const totalPerPerson = data.budget.reduce((sum, item) => {
