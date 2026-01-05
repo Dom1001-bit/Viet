@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vietnam Trip Planner - Google Sheets Ready</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        /* Spreadsheet look */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.875rem;
+            background-color: white;
+        }
+        th, td {
+            border: 1px solid #d1d5db;
+            padding: 8px 12px;
+            text-align: left;
+            white-space: nowrap; 
+        }
+        th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+            color: #374151;
+        }
+        tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        tr:hover {
+            background-color: #f0fdf4;
+        }
+        /* Scrollable table container */
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen font-sans">
+
+    <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <!-- Header -->
+        <div class="mb-8 text-center sm:text-left">
+            <h1 class="text-3xl font-bold text-green-700 flex items-center justify-center sm:justify-start gap-3">
+                <span>🇻🇳</span> Vietnam Trip Planner
+            </h1>
+            <p class="mt-2 text-gray-600">
+                Select a tab below, click <span class="font-bold text-green-600">Copy Table</span>, then paste into cell <strong>A1</strong> of your Google Sheet.
+            </p>
+        </div>
+
+        <!-- Notification Toast -->
+        <div id="toast" class="fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-y-[-150%] z-50 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <span>Copied! Ready to paste into Sheets.</span>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex flex-wrap gap-2 border-b border-gray-200 mb-6">
+            <button onclick="switchTab('itinerary')" id="tab-itinerary" class="tab-btn active px-4 py-2 bg-white border-t border-l border-r border-gray-200 rounded-t-lg font-medium text-green-700 hover:bg-gray-50 focus:outline-none">Itinerary</button>
+            <button onclick="switchTab('budget')" id="tab-budget" class="tab-btn px-4 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 focus:outline-none rounded-t-lg">Budget</button>
+            <button onclick="switchTab('packing')" id="tab-packing" class="tab-btn px-4 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 focus:outline-none rounded-t-lg">Packing List</button>
+            <button onclick="switchTab('recs')" id="tab-recs" class="tab-btn px-4 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 focus:outline-none rounded-t-lg">Recommendations</button>
+            <button onclick="switchTab('riding')" id="tab-riding" class="tab-btn px-4 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 focus:outline-none rounded-t-lg">Riding Notes</button>
+            <button onclick="switchTab('expenses')" id="tab-expenses" class="tab-btn px-4 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 focus:outline-none rounded-t-lg">Expense Tracker</button>
+        </div>
+
+        <!-- Tab 1: Itinerary -->
+        <div id="itinerary" class="tab-content active">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Tab 1: Itinerary</h2>
+                <button onclick="copyTable('table-itinerary')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    Copy Table
+                </button>
+            </div>
+            <div class="table-container">
+                <table id="table-itinerary">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Day</th>
+                            <th>Location</th>
+                            <th>Time</th>
+                            <th>Activity</th>
+                            <th>Google Maps</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Feb 25</td><td>Tue</td><td>Hanoi</td><td>10:35</td><td>Arrive at Noi Bai Airport</td><td><a href="https://maps.app.goo.gl/2Q4wQ7z1k1QFZ9tU6Immigration">Map Link</a></td><td>Immigration & baggage</td></tr>
+                        <tr><td>Feb 25</td><td>Tue</td><td>Hanoi</td><td>12:00</td><td>Transfer to Hoan Kiem</td><td><a href="https://maps.app.goo.gl/8pYcYbZ6QxZc5rXr6Grab">Map Link</a></td><td>Grab / Taxi</td></tr>
+                        <tr><td>Feb 25</td><td>Tue</td><td>Hanoi</td><td>13:30</td><td>Lunch + Airbnb check-in</td><td></td><td>Near Old Quarter</td></tr>
+                        <tr><td>Feb 25</td><td>Tue</td><td>Hanoi</td><td>14:30</td><td>Hoan Kiem Lake & Ngoc Son Temple</td><td><a href="https://maps.app.goo.gl/X3k9hN7b9f2qKXxH7Easy">Map Link</a></td><td>Easy walk</td></tr>
+                        <tr><td>Feb 25</td><td>Tue</td><td>Hanoi</td><td>Evening</td><td>Old Quarter walk + dinner</td><td></td><td>Early rest</td></tr>
+                        <tr><td>Feb 26</td><td>Wed</td><td>Hanoi</td><td>08:00</td><td>Breakfast</td><td></td><td>Near Airbnb</td></tr>
+                        <tr><td>Feb 26</td><td>Wed</td><td>Hanoi</td><td>09:00</td><td>Ho Chi Minh Complex</td><td><a href="https://maps.app.goo.gl/QFvRrJ4nH9wqk9k69">Map Link</a></td><td>Mausoleum area</td></tr>
+                        <tr><td>Feb 26</td><td>Wed</td><td>Hanoi</td><td>12:00</td><td>Lunch</td><td></td><td>Bun Cha / local</td></tr>
+                        <tr><td>Feb 26</td><td>Wed</td><td>Hanoi</td><td>13:30</td><td>Temple of Literature</td><td><a href="https://maps.app.goo.gl/5nC7wK9DqfL5W7fF8">Map Link</a></td><td>Cultural visit</td></tr>
+                        <tr><td>Feb 26</td><td>Wed</td><td>Hanoi</td><td>17:30</td><td>Back to Airbnb, pack</td><td></td><td>Prep for loop</td></tr>
+                        <tr><td>Feb 26</td><td>Wed</td><td>Hanoi</td><td>19:30</td><td>Night bus to Ha Giang</td><td><a href="https://maps.app.goo.gl/6cRr8j3TnP7dQw2E7">Map Link</a></td><td>Pickup at Airbnb</td></tr>
+                        <tr><td>Feb 27</td><td>Thu</td><td>Ha Giang</td><td>Morning</td><td>Arrival + breakfast</td><td></td><td>Mama’s Homestay</td></tr>
+                        <tr><td>Feb 27</td><td>Thu</td><td>Ha Giang</td><td>10:30</td><td>Start Loop – Day 1</td><td><a href="https://maps.app.goo.gl/8d3mQFv8gqz9z2oA7">Map Link</a></td><td>Yen Minh route</td></tr>
+                        <tr><td>Feb 27</td><td>Thu</td><td>Ha Giang</td><td>Day</td><td>Dong Van Plateau, Heaven Gate</td><td></td><td>Scenic stops</td></tr>
+                        <tr><td>Feb 27</td><td>Thu</td><td>Yen Minh</td><td>Evening</td><td>Dinner & overnight</td><td></td><td>Homestay</td></tr>
+                        <tr><td>Feb 28</td><td>Fri</td><td>Ha Giang</td><td>08:00</td><td>Breakfast</td><td></td><td></td></tr>
+                        <tr><td>Feb 28</td><td>Fri</td><td>Ha Giang</td><td>09:00</td><td>Start Loop – Day 2</td><td><a href="https://maps.app.goo.gl/y5mZKZK8R6FqJ2Aq6">Map Link</a></td><td>Dong Van</td></tr>
+                        <tr><td>Feb 28</td><td>Fri</td><td>Dong Van</td><td>Day</td><td>Lung Cam, Lung Cu Flag Tower</td><td></td><td>Photo stops</td></tr>
+                        <tr><td>Feb 28</td><td>Fri</td><td>Dong Van</td><td>Evening</td><td>Old Quarter walk + overnight</td><td></td><td>Guesthouse</td></tr>
+                        <tr><td>Mar 1</td><td>Sat</td><td>Ha Giang</td><td>08:00</td><td>Breakfast</td><td></td><td></td></tr>
+                        <tr><td>Mar 1</td><td>Sat</td><td>Ha Giang</td><td>09:00</td><td>Start Loop – Day 3</td><td><a href="https://maps.app.goo.gl/L9qg3QXJwZ1q8R7c8">Map Link</a></td><td>Du Gia</td></tr>
+                        <tr><td>Mar 1</td><td>Sat</td><td>Du Gia</td><td>Day</td><td>Ma Pi Leng, Nho Que River</td><td></td><td>Highlight day</td></tr>
+                        <tr><td>Mar 1</td><td>Sat</td><td>Du Gia</td><td>Evening</td><td>Dinner & overnight</td><td></td><td>Homestay</td></tr>
+                        <tr><td>Mar 2</td><td>Sun</td><td>Ha Giang</td><td>08:00</td><td>Breakfast</td><td></td><td></td></tr>
+                        <tr><td>Mar 2</td><td>Sun</td><td>Ha Giang</td><td>09:00</td><td>Loop Day 4 – Du Gia Waterfall</td><td></td><td>Short hike</td></tr>
+                        <tr><td>Mar 2</td><td>Sun</td><td>Ha Giang</td><td>17:00</td><td>Return to town</td><td><a href="https://maps.app.goo.gl/9p6kZ8rR5F4xXk7o8">Map Link</a></td><td>Shower & pack</td></tr>
+                        <tr><td>Mar 2</td><td>Sun</td><td>Ha Giang</td><td>18:00</td><td>Night bus to Hanoi</td><td></td><td>VIP cabin</td></tr>
+                        <tr><td>Mar 3</td><td>Mon</td><td>Hanoi</td><td>00:00</td><td>Arrival in Hanoi</td><td></td><td>Sleep</td></tr>
+                        <tr><td>Mar 3</td><td>Mon</td><td>Hanoi</td><td>Late AM</td><td>Brunch</td><td></td><td>Cafe hopping</td></tr>
+                        <tr><td>Mar 3</td><td>Mon</td><td>Hanoi</td><td>Afternoon</td><td>Train Street + shopping</td><td><a href="https://maps.app.goo.gl/W9QF7H3R5Z8M6k2c7">Map Link</a></td><td>Timed entry</td></tr>
+                        <tr><td>Mar 3</td><td>Mon</td><td>Hanoi</td><td>Evening</td><td>Water Puppet Show + Farewell</td><td><a href="https://maps.app.goo.gl/3f6n2Q9M8Z4X5gJ7A">Map Link</a></td><td>Last night</td></tr>
+                        <tr><td>Mar 4</td><td>Tue</td><td>Hanoi</td><td>02:00</td><td>Flight to Manila</td><td></td><td>Arrive airport by 23:00</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 2: Budget -->
+        <div id="budget" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Tab 2: Budget</h2>
+                <button onclick="copyTable('table-budget')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    Copy Table
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mb-2 italic">Note: Column F contains formulas. Paste into Sheets to activate them.</p>
+            <div class="table-container">
+                <table id="table-budget">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Total Cost</th>
+                            <th>Shared? (Y/N)</th>
+                            <th># of People</th>
+                            <th>Cost / Person</th>
+                            <th>Formula (Paste into Col E)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Hanoi Airbnb</td><td>180</td><td>Y</td><td>2</td><td></td><td>=IF(C2="Y",B2/D2,B2)</td></tr>
+                        <tr><td>Food – Hanoi</td><td>100</td><td>N</td><td>1</td><td></td><td>=IF(C3="Y",B3/D3,B3)</td></tr>
+                        <tr><td>Ha Giang Loop</td><td>260</td><td>N</td><td>1</td><td></td><td>=IF(C4="Y",B4/D4,B4)</td></tr>
+                        <tr><td>Night Bus (RT)</td><td>70</td><td>N</td><td>1</td><td></td><td>=IF(C5="Y",B5/D5,B5)</td></tr>
+                        <tr><td>Activities</td><td>40</td><td>Y</td><td>2</td><td></td><td>=IF(C6="Y",B6/D6,B6)</td></tr>
+                        <tr><td>Shopping</td><td>50</td><td>N</td><td>1</td><td></td><td>=IF(C7="Y",B7/D7,B7)</td></tr>
+                        <tr><td><strong>TOTAL PER PERSON</strong></td><td></td><td></td><td></td><td><strong>=SUM(E2:E7)</strong></td><td></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 3: Packing -->
+        <div id="packing" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Tab 3: Packing List</h2>
+                <button onclick="copyTable('table-packing')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    Copy Table
+                </button>
+            </div>
+            <div class="table-container">
+                <table id="table-packing">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Category</th>
+                            <th>Packed?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Passport + copy</td><td>Essentials</td><td>FALSE</td></tr>
+                        <tr><td>eSIM / SIM</td><td>Essentials</td><td>FALSE</td></tr>
+                        <tr><td>Cash (small bills)</td><td>Essentials</td><td>FALSE</td></tr>
+                        <tr><td>Warm jacket</td><td>Clothing</td><td>FALSE</td></tr>
+                        <tr><td>Riding pants</td><td>Ha Giang</td><td>FALSE</td></tr>
+                        <tr><td>Gloves</td><td>Ha Giang</td><td>FALSE</td></tr>
+                        <tr><td>Rain jacket</td><td>Ha Giang</td><td>FALSE</td></tr>
+                        <tr><td>Toiletries</td><td>Health</td><td>FALSE</td></tr>
+                        <tr><td>Power Bank</td><td>Tech</td><td>FALSE</td></tr>
+                        <tr><td>Universal Adapter</td><td>Tech</td><td>FALSE</td></tr>
+                        <tr><td>Sunscreen</td><td>Health</td><td>FALSE</td></tr>
+                        <tr><td>Insect Repellent</td><td>Health</td><td>FALSE</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 4: Recommendations -->
+        <div id="recs" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Tab 4: Recommendations</h2>
+                <button onclick="copyTable('table-recs')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    Copy Table
+                </button>
+            </div>
+            <div class="table-container">
+                <table id="table-recs">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Name</th>
+                            <th>Map Link</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Food (Hanoi)</td><td>Phở Gia Truyền Bát Đàn</td><td><a href="https://maps.app.goo.gl/Y5y5h5hLQ9zL8XyM8">Link</a></td><td>Famous Pho</td></tr>
+                        <tr><td>Food (Hanoi)</td><td>Bún Chả Hàng Quạt</td><td><a href="https://maps.app.goo.gl/9Wm9z5oF1V5z7K8A7">Link</a></td><td>Local favorite</td></tr>
+                        <tr><td>Food (Hanoi)</td><td>Chả Cá Thăng Long</td><td><a href="https://maps.app.goo.gl/z9x2Zr6Hk5W1gP7x8">Link</a></td><td>Turmeric Fish</td></tr>
+                        <tr><td>Coffee</td><td>Café Đinh</td><td><a href="https://maps.app.goo.gl/z3W9C6J2M4r5D9fK8">Link</a></td><td>Egg Coffee</td></tr>
+                        <tr><td>Coffee</td><td>The Note Coffee</td><td><a href="https://maps.app.goo.gl/7k8L1Q9ZpR5mK6x8A">Link</a></td><td>Post-it notes view</td></tr>
+                        <tr><td>Activities</td><td>Train Street</td><td><a href="https://maps.app.goo.gl/W9QF7H3R5Z8M6k2c7">Link</a></td><td>Check train schedule</td></tr>
+                        <tr><td>Activities</td><td>Water Puppet Theatre</td><td><a href="https://maps.app.goo.gl/3f6n2Q9M8Z4X5gJ7A">Link</a></td><td>Book in advance</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 5: Riding Notes -->
+        <div id="riding" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Tab 5: Riding Notes</h2>
+                <button onclick="copyTable('table-riding')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    Copy Table
+                </button>
+            </div>
+            <div class="table-container">
+                <table id="table-riding">
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th>Route</th>
+                            <th>Road Condition</th>
+                            <th>Weather</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Day 1</td><td>Ha Giang → Yen Minh</td><td>Curvy, paved</td><td>Cold AM</td><td>Easy warm-up ride</td></tr>
+                        <tr><td>Day 2</td><td>Yen Minh → Dong Van</td><td>Mountain passes</td><td>Windy</td><td>Many photo stops</td></tr>
+                        <tr><td>Day 3</td><td>Dong Van → Du Gia</td><td>Steep & scenic</td><td>Cooler</td><td>Ma Pi Leng Pass is key</td></tr>
+                        <tr><td>Day 4</td><td>Du Gia → Ha Giang</td><td>Mixed roads</td><td>Warmer</td><td>Waterfall stop + swim</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 6: Expense Tracker -->
+        <div id="expenses" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-700">Tab 6: Daily Expense Tracker</h2>
+                <button onclick="copyTable('table-expenses')" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    Copy Table
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mb-2 italic">Note: Copy formulas in the last column into column G when calculating.</p>
+            <div class="table-container">
+                <table id="table-expenses">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Paid By</th>
+                            <th>Shared? (Y/N)</th>
+                            <th>Split Amount (Formula)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Feb 25</td><td>Food</td><td>Lunch Hanoi</td><td>12</td><td>Me</td><td>N</td><td>=IF(F2="Y",D2/2,D2)</td></tr>
+                        <tr><td>Feb 26</td><td>Transport</td><td>Grab</td><td>8</td><td>Me</td><td>Y</td><td>=IF(F3="Y",D3/2,D3)</td></tr>
+                        <tr><td></td><td></td><td><strong>TOTAL</strong></td><td>=SUM(D2:D50)</td><td></td><td><strong>MY TOTAL</strong></td><td>=SUM(G2:G50)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            // Hide all tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active styles from buttons
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('bg-white', 'border-t', 'border-l', 'border-r', 'text-green-700', 'font-medium', 'border-gray-200');
+                btn.classList.add('text-gray-500');
+            });
+
+            // Show current tab
+            document.getElementById(tabName).classList.add('active');
+
+            // Add active styles to current button
+            const activeBtn = document.getElementById('tab-' + tabName);
+            activeBtn.classList.remove('text-gray-500');
+            activeBtn.classList.add('bg-white', 'border-t', 'border-l', 'border-r', 'text-green-700', 'font-medium', 'border-gray-200');
+        }
+
+        function copyTable(tableId) {
+            const table = document.getElementById(tableId);
+            const range = document.createRange();
+            range.selectNode(table);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            
+            try {
+                document.execCommand('copy');
+                showToast();
+            } catch (err) {
+                console.error('Failed to copy', err);
+            }
+            
+            window.getSelection().removeAllRanges();
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('translate-y-[-150%]');
+            setTimeout(() => {
+                toast.classList.add('translate-y-[-150%]');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
