@@ -872,9 +872,9 @@
                         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden min-h-[600px] flex flex-col">
                             <div className="flex border-b border-gray-200 overflow-x-auto">
                                 <TabButton active={activeTab === 'itinerary'} onClick={() => setActiveTab('itinerary')} icon={Calendar} label="Itinerary" />
+                                <TabButton active={activeTab === 'recs'} onClick={() => setActiveTab('recs')} icon={Utensils} label="Recs" />
                                 <TabButton active={activeTab === 'budget'} onClick={() => setActiveTab('budget')} icon={DollarSign} label="Budget" />
                                 <TabButton active={activeTab === 'packing'} onClick={() => setActiveTab('packing')} icon={Briefcase} label="Packing" />
-                                <TabButton active={activeTab === 'recs'} onClick={() => setActiveTab('recs')} icon={Utensils} label="Recs" />
                             </div>
 
                             <div className="p-6 flex-1 bg-gray-50/50">
