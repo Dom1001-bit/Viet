@@ -564,17 +564,39 @@
                     return sum + (item.shared === 'Yes' ? cost / people : cost);
                 }, 0);
 
+                const totalTripCost = data.budget.reduce((sum, item) => {
+                     return sum + (parseFloat(item.php) || 0);
+                }, 0);
+
                 return (
                     <div>
                         <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-white p-4 rounded-lg shadow-sm border border-green-100">
+                            {/* Per Person Card */}
+                            <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-5 rounded-xl shadow-md border border-green-200">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h3 className="text-xs uppercase text-gray-500 font-bold">Estimated Cost Per Person</h3>
-                                        <p className="text-2xl font-bold text-green-700">₱{totalPerPerson.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                        <h3 className="text-xs uppercase text-green-800 font-bold tracking-wider mb-1">My Estimated Share</h3>
+                                        <p className="text-3xl font-extrabold text-green-700">₱{totalPerPerson.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
                                     </div>
-                                    <div className="text-right text-xs text-gray-400">1 PHP ≈ 440 VND</div>
+                                    <div className="p-2 bg-white/50 rounded-lg">
+                                        <Users className="text-green-600" size={20} />
+                                    </div>
                                 </div>
+                                <div className="mt-2 text-xs text-green-600 font-medium">Based on split costs</div>
+                            </div>
+
+                            {/* Total Trip Cost Card */}
+                            <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-5 rounded-xl shadow-md border border-blue-200">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="text-xs uppercase text-blue-800 font-bold tracking-wider mb-1">Total Trip Budget</h3>
+                                        <p className="text-3xl font-extrabold text-blue-700">₱{totalTripCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                    </div>
+                                    <div className="p-2 bg-white/50 rounded-lg">
+                                        <DollarSign className="text-blue-600" size={20} />
+                                    </div>
+                                </div>
+                                <div className="mt-2 text-xs text-blue-600 font-medium">1 PHP ≈ {EXCHANGE_RATE} VND</div>
                             </div>
                         </div>
                         <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
