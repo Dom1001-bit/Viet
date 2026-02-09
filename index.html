@@ -149,16 +149,6 @@
                 { id: 2, category: 'Food (Hanoi)', name: 'Bún Chả Hàng Quạt', map: 'https://maps.app.goo.gl/9Wm9z5oF1V5z7K8A7', notes: 'Local favorite' },
                 { id: 3, category: 'Coffee', name: 'Café Đinh', map: 'https://maps.app.goo.gl/z3W9C6J2M4r5D9fK8', notes: 'Egg Coffee' },
                 { id: 4, category: 'Activities', name: 'Train Street', map: 'https://maps.app.goo.gl/W9QF7H3R5Z8M6k2c7', notes: 'Check schedule' },
-            ],
-            riding: [
-                { id: 1, day: 'Day 1', route: 'Ha Giang → Yen Minh', condition: 'Curvy, paved', weather: 'Cold AM', notes: 'Easy warm-up ride' },
-                { id: 2, day: 'Day 2', route: 'Yen Minh → Dong Van', condition: 'Mountain passes', weather: 'Windy', notes: 'Many photo stops' },
-                { id: 3, day: 'Day 3', route: 'Dong Van → Du Gia', condition: 'Steep & scenic', weather: 'Cooler', notes: 'Ma Pi Leng Pass is key' },
-                { id: 4, day: 'Day 4', route: 'Du Gia → Ha Giang', condition: 'Mixed roads', weather: 'Warmer', notes: 'Waterfall stop' },
-            ],
-            expenses: [
-                { id: 1, date: 'Feb 25', category: 'Food', desc: 'Lunch Hanoi', vnd: 132000, php: 300, payer: 'Me', shared: 'No' },
-                { id: 2, date: 'Feb 26', category: 'Transport', desc: 'Grab', vnd: 88000, php: 200, payer: 'Me', shared: 'Yes' },
             ]
         };
 
@@ -381,17 +371,52 @@
                 updateListInCloud(listName, updatedList);
             };
 
+            // Improved reorder function to handle grouped lists
             const moveItem = (index, direction, listName) => {
                 const currentList = data[listName];
-                if (direction === 'up' && index === 0) return;
-                if (direction === 'down' && index === currentList.length - 1) return;
-
                 const newList = [...currentList];
-                const targetIndex = direction === 'up' ? index - 1 : index + 1;
-                [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
-                
-                setData(prev => ({ ...prev, [listName]: newList })); // Optimistic
-                updateListInCloud(listName, newList);
+
+                if (listName === 'itinerary') {
+                    // Logic to swap items within the same date group
+                    const currentItem = newList[index];
+                    const currentDate = currentItem.date;
+                    let targetIndex = -1;
+
+                    if (direction === 'up') {
+                        // Find previous item with same date
+                        for (let i = index - 1; i >= 0; i--) {
+                            if (newList[i].date === currentDate) {
+                                targetIndex = i;
+                                break;
+                            }
+                        }
+                    } else {
+                        // Find next item with same date
+                        for (let i = index + 1; i < newList.length; i++) {
+                            if (newList[i].date === currentDate) {
+                                targetIndex = i;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (targetIndex !== -1) {
+                        // Swap
+                        [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
+                        setData(prev => ({ ...prev, [listName]: newList }));
+                        updateListInCloud(listName, newList);
+                    }
+                } else {
+                    // Standard swap for flat lists
+                    if (direction === 'up' && index === 0) return;
+                    if (direction === 'down' && index === currentList.length - 1) return;
+
+                    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+                    [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
+                    
+                    setData(prev => ({ ...prev, [listName]: newList }));
+                    updateListInCloud(listName, newList);
+                }
             };
 
             const toggleDate = (date) => {
@@ -463,23 +488,28 @@
                                             </tr>
 
                                             {/* Content Rows */}
-                                            {!isCollapsed && group.items.map((item) => {
+                                            {!isCollapsed && group.items.map((item, localIndex) => {
                                                 const isEditing = editRow.id === item.id && editRow.list === 'itinerary';
+                                                
+                                                // Determine if arrows should be disabled based on group position
+                                                const isFirstInGroup = localIndex === 0;
+                                                const isLastInGroup = localIndex === group.items.length - 1;
+
                                                 return (
                                                     <tr key={item.id} className="hover:bg-blue-50 group transition-colors">
                                                         <td className="p-2 text-center">
                                                             <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 <button 
                                                                     onClick={(e) => { e.stopPropagation(); moveItem(item.originalIndex, 'up', 'itinerary'); }} 
-                                                                    disabled={item.originalIndex === 0} 
-                                                                    className={`p-1 rounded hover:bg-gray-200 ${item.originalIndex === 0 ? 'text-gray-300' : 'text-gray-500'}`}
+                                                                    disabled={isFirstInGroup} 
+                                                                    className={`p-1 rounded hover:bg-gray-200 ${isFirstInGroup ? 'text-gray-300' : 'text-gray-500'}`}
                                                                 >
                                                                     <ArrowUp size={12} />
                                                                 </button>
                                                                 <button 
                                                                     onClick={(e) => { e.stopPropagation(); moveItem(item.originalIndex, 'down', 'itinerary'); }} 
-                                                                    disabled={item.originalIndex === data.itinerary.length - 1} 
-                                                                    className={`p-1 rounded hover:bg-gray-200 ${item.originalIndex === data.itinerary.length - 1 ? 'text-gray-300' : 'text-gray-500'}`}
+                                                                    disabled={isLastInGroup} 
+                                                                    className={`p-1 rounded hover:bg-gray-200 ${isLastInGroup ? 'text-gray-300' : 'text-gray-500'}`}
                                                                 >
                                                                     <ArrowDown size={12} />
                                                                 </button>
@@ -551,6 +581,7 @@
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
                                     <tr>
+                                        <th className="p-3 w-12 text-center">#</th>
                                         <th className="p-3">Category</th>
                                         <th className="p-3 w-32 text-right">Cost (VND)</th>
                                         <th className="p-3 w-32 text-right">Cost (PHP)</th>
@@ -562,13 +593,19 @@
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {data.budget.map(item => {
+                                    {data.budget.map((item, index) => {
                                         const isEditing = editRow.id === item.id && editRow.list === 'budget';
                                         const costPHP = parseFloat(item.php) || 0;
                                         const perPerson = item.shared === 'Yes' ? (costPHP / item.people) : costPHP;
                                         
                                         return (
                                             <tr key={item.id} className="hover:bg-gray-50 group">
+                                                <td className="p-2 text-center">
+                                                    <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={() => moveItem(index, 'up', 'budget')} disabled={index === 0} className={`p-1 rounded hover:bg-gray-200 ${index === 0 ? 'text-gray-300' : 'text-gray-500'}`}><ArrowUp size={12} /></button>
+                                                        <button onClick={() => moveItem(index, 'down', 'budget')} disabled={index === data.budget.length - 1} className={`p-1 rounded hover:bg-gray-200 ${index === data.budget.length - 1 ? 'text-gray-300' : 'text-gray-500'}`}><ArrowDown size={12} /></button>
+                                                    </div>
+                                                </td>
                                                 {isEditing ? (
                                                     <>
                                                         <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
@@ -649,6 +686,7 @@
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
                                     <tr>
+                                        <th className="p-3 w-12 text-center">#</th>
                                         <th className="p-3">Item</th>
                                         <th className="p-3 w-40">Category</th>
                                         <th className="p-3 w-32 text-center">Packed?</th>
@@ -656,10 +694,16 @@
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {data.packing.map(item => {
+                                    {data.packing.map((item, index) => {
                                         const isEditing = editRow.id === item.id && editRow.list === 'packing';
                                         return (
                                             <tr key={item.id} className="hover:bg-gray-50 group">
+                                                <td className="p-2 text-center">
+                                                    <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={() => moveItem(index, 'up', 'packing')} disabled={index === 0} className={`p-1 rounded hover:bg-gray-200 ${index === 0 ? 'text-gray-300' : 'text-gray-500'}`}><ArrowUp size={12} /></button>
+                                                        <button onClick={() => moveItem(index, 'down', 'packing')} disabled={index === data.packing.length - 1} className={`p-1 rounded hover:bg-gray-200 ${index === data.packing.length - 1 ? 'text-gray-300' : 'text-gray-500'}`}><ArrowDown size={12} /></button>
+                                                    </div>
+                                                </td>
                                                 {isEditing ? (
                                                     <>
                                                         <td className="p-2"><Input value={formData.item} onChange={e => handleFieldChange('item', e.target.value)} /></td>
@@ -710,6 +754,7 @@
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
                                 <tr>
+                                    <th className="p-3 w-12 text-center">#</th>
                                     <th className="p-3 w-40">Category</th>
                                     <th className="p-3">Name</th>
                                     <th className="p-3 w-24">Map Link</th>
@@ -718,10 +763,16 @@
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {data.recs.map(item => {
+                                {data.recs.map((item, index) => {
                                     const isEditing = editRow.id === item.id && editRow.list === 'recs';
                                     return (
                                         <tr key={item.id} className="hover:bg-gray-50 group">
+                                            <td className="p-2 text-center">
+                                                <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => moveItem(index, 'up', 'recs')} disabled={index === 0} className={`p-1 rounded hover:bg-gray-200 ${index === 0 ? 'text-gray-300' : 'text-gray-500'}`}><ArrowUp size={12} /></button>
+                                                    <button onClick={() => moveItem(index, 'down', 'recs')} disabled={index === data.recs.length - 1} className={`p-1 rounded hover:bg-gray-200 ${index === data.recs.length - 1 ? 'text-gray-300' : 'text-gray-500'}`}><ArrowDown size={12} /></button>
+                                                </div>
+                                            </td>
                                             {isEditing ? (
                                                 <>
                                                     <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
@@ -758,159 +809,6 @@
                     <button onClick={() => addItem('recs', { category: 'Food', name: '', map: '', notes: '' })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Recommendation</button>
                 </div>
             );
-
-            const renderRiding = () => (
-                <div>
-                    <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-                        <table className="w-full text-left border-collapse">
-                            <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
-                                <tr>
-                                    <th className="p-3 w-24">Day</th>
-                                    <th className="p-3">Route</th>
-                                    <th className="p-3 w-40">Conditions</th>
-                                    <th className="p-3 w-32">Weather</th>
-                                    <th className="p-3">Notes</th>
-                                    <th className="p-3 w-20 text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {data.riding.map(item => {
-                                    const isEditing = editRow.id === item.id && editRow.list === 'riding';
-                                    return (
-                                        <tr key={item.id} className="hover:bg-gray-50 group">
-                                            {isEditing ? (
-                                                <>
-                                                    <td className="p-2"><Input value={formData.day} onChange={e => handleFieldChange('day', e.target.value)} /></td>
-                                                    <td className="p-2"><Input value={formData.route} onChange={e => handleFieldChange('route', e.target.value)} /></td>
-                                                    <td className="p-2"><Input value={formData.condition} onChange={e => handleFieldChange('condition', e.target.value)} /></td>
-                                                    <td className="p-2"><Input value={formData.weather} onChange={e => handleFieldChange('weather', e.target.value)} /></td>
-                                                    <td className="p-2"><Input value={formData.notes} onChange={e => handleFieldChange('notes', e.target.value)} /></td>
-                                                    <td className="p-2 flex gap-1 justify-center">
-                                                        <ActionButton onClick={() => saveItem('riding')} icon={Save} colorClass="bg-green-100 text-green-700" />
-                                                        <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
-                                                    </td>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <td className="p-3 text-sm font-bold text-gray-700">{item.day}</td>
-                                                    <td className="p-3 text-sm font-medium text-gray-800">{item.route}</td>
-                                                    <td className="p-3 text-sm text-gray-600">{item.condition}</td>
-                                                    <td className="p-3 text-sm text-gray-600">{item.weather}</td>
-                                                    <td className="p-3 text-sm text-gray-500 italic">{item.notes}</td>
-                                                    <td className="p-3 text-center">
-                                                        <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <ActionButton onClick={() => startEdit(item, 'riding')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
-                                                            <ActionButton onClick={() => deleteItem(item.id, 'riding')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
-                                                        </div>
-                                                    </td>
-                                                </>
-                                            )}
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                    <button onClick={() => addItem('riding', { day: 'Day X', route: '', condition: '', weather: '', notes: '' })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Route</button>
-                </div>
-            );
-
-            const renderExpenses = () => {
-                const totalSpent = data.expenses.reduce((sum, item) => sum + parseFloat(item.php || 0), 0);
-                const myShare = data.expenses.reduce((sum, item) => {
-                    const amt = parseFloat(item.php || 0);
-                    return sum + (item.shared === 'Yes' ? amt / 2 : amt); 
-                }, 0);
-
-                return (
-                    <div>
-                        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                                <h3 className="text-xs uppercase text-gray-500 font-bold">Total Spent</h3>
-                                <p className="text-2xl font-bold text-gray-800">₱{totalSpent.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                            </div>
-                            <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
-                                <h3 className="text-xs uppercase text-gray-500 font-bold">My Share (Approx)</h3>
-                                <p className="text-2xl font-bold text-blue-700">₱{myShare.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                            </div>
-                        </div>
-                        <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
-                                    <tr>
-                                        <th className="p-3 w-24">Date</th>
-                                        <th className="p-3 w-32">Category</th>
-                                        <th className="p-3">Description</th>
-                                        <th className="p-3 w-32 text-right">Cost (VND)</th>
-                                        <th className="p-3 w-32 text-right">Cost (PHP)</th>
-                                        <th className="p-3 w-24">Paid By</th>
-                                        <th className="p-3 w-24 text-center">Shared?</th>
-                                        <th className="p-3 w-20 text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {data.expenses.map(item => {
-                                        const isEditing = editRow.id === item.id && editRow.list === 'expenses';
-                                        return (
-                                            <tr key={item.id} className="hover:bg-gray-50 group">
-                                                {isEditing ? (
-                                                    <>
-                                                        <td className="p-2"><Input value={formData.date} onChange={e => handleFieldChange('date', e.target.value)} /></td>
-                                                        <td className="p-2"><Input value={formData.category} onChange={e => handleFieldChange('category', e.target.value)} /></td>
-                                                        <td className="p-2"><Input value={formData.desc} onChange={e => handleFieldChange('desc', e.target.value)} /></td>
-                                                        <td className="p-2">
-                                                            <div className="relative">
-                                                                <Input type="number" value={formData.vnd} onChange={e => handleCurrencyChange('vnd', e.target.value)} className="text-right pr-6" placeholder="VND" />
-                                                                <span className="absolute right-2 top-2 text-xs text-gray-400">₫</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <div className="relative">
-                                                                <Input type="number" value={formData.php} onChange={e => handleCurrencyChange('php', e.target.value)} className="text-right pr-6" placeholder="PHP" />
-                                                                <span className="absolute right-2 top-2 text-xs text-gray-400">₱</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-2"><Input value={formData.payer} onChange={e => handleFieldChange('payer', e.target.value)} /></td>
-                                                        <td className="p-2">
-                                                            <select value={formData.shared} onChange={e => handleFieldChange('shared', e.target.value)} className="w-full p-1.5 text-sm border rounded">
-                                                                <option value="Yes">Yes</option>
-                                                                <option value="No">No</option>
-                                                            </select>
-                                                        </td>
-                                                        <td className="p-2 flex gap-1 justify-center">
-                                                            <ActionButton onClick={() => saveItem('expenses')} icon={Save} colorClass="bg-green-100 text-green-700" />
-                                                            <ActionButton onClick={cancelEdit} icon={X} colorClass="bg-gray-100 text-gray-600" />
-                                                        </td>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <td className="p-3 text-sm text-gray-500">{item.date}</td>
-                                                        <td className="p-3 text-sm text-gray-600">{item.category}</td>
-                                                        <td className="p-3 text-sm font-medium text-gray-800">{item.desc}</td>
-                                                        <td className="p-3 text-sm text-right text-gray-500">₫{Number(item.vnd || 0).toLocaleString()}</td>
-                                                        <td className="p-3 text-sm text-right font-bold text-gray-800">₱{Number(item.php || 0).toLocaleString()}</td>
-                                                        <td className="p-3 text-sm text-gray-600">{item.payer}</td>
-                                                        <td className="p-3 text-sm text-center">
-                                                            <span className={`px-2 py-1 rounded text-xs font-semibold ${item.shared === 'Yes' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{item.shared}</span>
-                                                        </td>
-                                                        <td className="p-3 text-center">
-                                                            <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <ActionButton onClick={() => startEdit(item, 'expenses')} icon={Edit2} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100" />
-                                                                <ActionButton onClick={() => deleteItem(item.id, 'expenses')} icon={Trash2} colorClass="bg-red-50 text-red-600 hover:bg-red-100" />
-                                                            </div>
-                                                        </td>
-                                                    </>
-                                                )}
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                        <button onClick={() => addItem('expenses', { date: 'Feb X', category: 'Food', desc: '', vnd: 0, php: 0, payer: 'Me', shared: 'No' })} className="mt-4 flex items-center gap-2 text-sm font-medium text-green-700 hover:text-green-800"><Plus size={16} /> Add Transaction</button>
-                    </div>
-                );
-            };
 
             return (
                 <div className="min-h-screen font-sans p-4 md:p-8">
@@ -977,8 +875,6 @@
                                 <TabButton active={activeTab === 'budget'} onClick={() => setActiveTab('budget')} icon={DollarSign} label="Budget" />
                                 <TabButton active={activeTab === 'packing'} onClick={() => setActiveTab('packing')} icon={Briefcase} label="Packing" />
                                 <TabButton active={activeTab === 'recs'} onClick={() => setActiveTab('recs')} icon={Utensils} label="Recs" />
-                                <TabButton active={activeTab === 'riding'} onClick={() => setActiveTab('riding')} icon={Bike} label="Riding" />
-                                <TabButton active={activeTab === 'expenses'} onClick={() => setActiveTab('expenses')} icon={CreditCard} label="Tracker" />
                             </div>
 
                             <div className="p-6 flex-1 bg-gray-50/50">
@@ -986,8 +882,6 @@
                                 {activeTab === 'budget' && renderBudget()}
                                 {activeTab === 'packing' && renderPacking()}
                                 {activeTab === 'recs' && renderRecs()}
-                                {activeTab === 'riding' && renderRiding()}
-                                {activeTab === 'expenses' && renderExpenses()}
                             </div>
                         </div>
                     </div>
