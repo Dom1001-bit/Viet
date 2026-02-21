@@ -454,16 +454,29 @@
                 const tableColumn = ["Date", "Day", "Location", "Time", "Activity", "Notes"];
                 const tableRows = [];
 
-                data.itinerary.forEach(item => {
-                    const itemData = [
-                        item.date || '',
-                        item.day || '',
-                        item.location || '',
-                        item.time || '',
-                        item.activity || '',
-                        item.notes || ''
-                    ];
-                    tableRows.push(itemData);
+                // Group items exactly like the UI to maintain visual order in PDF
+                const groupedItems = data.itinerary.reduce((groups, item) => {
+                    const dateKey = item.date || 'Unscheduled';
+                    if (!groups[dateKey]) {
+                        groups[dateKey] = { items: [] };
+                    }
+                    groups[dateKey].items.push(item);
+                    return groups;
+                }, {});
+
+                const uniqueDates = [...new Set(data.itinerary.map(item => item.date || 'Unscheduled'))];
+
+                uniqueDates.forEach(date => {
+                    groupedItems[date].items.forEach(item => {
+                        tableRows.push([
+                            item.date || '',
+                            item.day || '',
+                            item.location || '',
+                            item.time || '',
+                            item.activity || '',
+                            item.notes || ''
+                        ]);
+                    });
                 });
 
                 // Generate Table
