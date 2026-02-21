@@ -12,6 +12,10 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
 
+    <!-- jsPDF and AutoTable for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
     <!-- Import Map -->
     <script type="importmap">
     {
@@ -57,7 +61,7 @@
             Calendar, DollarSign, Briefcase, Plus, Trash2, Edit2, Save, X, 
             MapPin, Utensils, Bike, CreditCard, CheckCircle2, AlertCircle, 
             ArrowUp, ArrowDown, Users, RefreshCw, AlertTriangle, ExternalLink,
-            ChevronDown, ChevronRight, UserPlus
+            ChevronDown, ChevronRight, UserPlus, Download
         } from 'lucide-react';
         
         import { initializeApp } from "firebase/app";
@@ -431,6 +435,60 @@
                 });
             };
 
+            // PDF Generation logic using jsPDF
+            const downloadPDF = () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                // Add Title
+                doc.setFontSize(18);
+                doc.setTextColor(20, 83, 45); // Dark green matching theme
+                doc.text("Vietnam Trip Itinerary", 14, 22);
+                
+                // Add Subtitle / Travelers
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.text("Travelers: Ariel Sotto, Dom Bayno, Lyka Ramirez, Paul Jose, Christian Interino", 14, 30);
+
+                // Setup Table Data
+                const tableColumn = ["Date", "Day", "Location", "Time", "Activity", "Notes"];
+                const tableRows = [];
+
+                data.itinerary.forEach(item => {
+                    const itemData = [
+                        item.date || '',
+                        item.day || '',
+                        item.location || '',
+                        item.time || '',
+                        item.activity || '',
+                        item.notes || ''
+                    ];
+                    tableRows.push(itemData);
+                });
+
+                // Generate Table
+                doc.autoTable({
+                    head: [tableColumn],
+                    body: tableRows,
+                    startY: 36,
+                    theme: 'grid',
+                    headStyles: { fillColor: [22, 101, 52] }, // Emerald-800 to match theme
+                    styles: { fontSize: 9, cellPadding: 3, textColor: [50, 50, 50] },
+                    alternateRowStyles: { fillColor: [249, 250, 251] },
+                    columnStyles: {
+                        0: { cellWidth: 20, fontStyle: 'bold' }, // Date
+                        1: { cellWidth: 15 }, // Day
+                        2: { cellWidth: 25 }, // Location
+                        3: { cellWidth: 18 }, // Time
+                        4: { cellWidth: 'auto', fontStyle: 'bold' }, // Activity
+                        5: { cellWidth: 40, fontStyle: 'italic', textColor: [100, 100, 100] } // Notes
+                    }
+                });
+
+                doc.save("Vietnam_Trip_Itinerary.pdf");
+            };
+
+
             // --- RENDER FUNCTIONS ---
             const renderItinerary = () => {
                 // Group items by date
@@ -452,6 +510,16 @@
 
                 return (
                     <div>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 px-1 gap-4">
+                            <h2 className="text-xl font-bold text-gray-800">Trip Schedule</h2>
+                            <button 
+                                onClick={downloadPDF}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition-colors shadow-sm w-full sm:w-auto justify-center"
+                            >
+                                <Download size={16} /> Download PDF (Immigration)
+                            </button>
+                        </div>
+                        
                         <div className="overflow-x-auto border rounded-lg shadow-sm bg-white">
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-bold">
